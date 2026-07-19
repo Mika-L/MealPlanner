@@ -1,6 +1,7 @@
 using MealPlanner.Modules.Meals.Domain;
 using MealPlanner.Modules.Meals.Features.GenerateMealIdeas;
 using MealPlanner.Modules.Meals.Infrastructure;
+using MealPlanner.SharedKernel.Identity;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -9,18 +10,21 @@ namespace MealPlanner.Modules.Meals.IntegrationTests;
 [Collection(nameof(MySqlCollection))]
 public sealed class GenerateMealIdeasHandlerTests(MySqlFixture fixture)
 {
+    private static readonly Guid OwnerId = Guid.CreateVersion7();
+    private readonly ICurrentUser _currentUser = new StubCurrentUser(OwnerId);
+
     [Fact]
     public async Task Should_return_meals_matching_season_and_prep_time()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         await using var dbContext = await CreateFreshDbContextAsync(cancellationToken);
 
-        var winterStew = new Meal("Pot-au-feu", "Plat mijoté d'hiver", Season.Winter, MealStyle.Comforting, 120);
-        var quickSalad = new Meal("Salade express", "Salade estivale rapide", Season.Summer, MealStyle.Healthy | MealStyle.Quick, 15);
+        var winterStew = new Meal(OwnerId, "Pot-au-feu", "Plat mijoté d'hiver", Season.Winter, MealStyle.Comforting, 120);
+        var quickSalad = new Meal(OwnerId, "Salade express", "Salade estivale rapide", Season.Summer, MealStyle.Healthy | MealStyle.Quick, 15);
         dbContext.Meals.AddRange(winterStew, quickSalad);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var handler = new GenerateMealIdeasHandler(dbContext);
+        var handler = new GenerateMealIdeasHandler(dbContext, _currentUser);
         var query = new GenerateMealIdeasQuery(Season.Summer, null, MaxPrepTimeMinutes: 30, null, Days: 7);
 
         var result = await handler.HandleAsync(query, cancellationToken);
@@ -37,12 +41,12 @@ public sealed class GenerateMealIdeasHandlerTests(MySqlFixture fixture)
         await using var dbContext = await CreateFreshDbContextAsync(cancellationToken);
 
         dbContext.Meals.AddRange(
-            new Meal("Repas A", "", Season.AllYear, MealStyle.Quick, 10),
-            new Meal("Repas B", "", Season.AllYear, MealStyle.Quick, 20),
-            new Meal("Repas C", "", Season.AllYear, MealStyle.Quick, 30));
+            new Meal(OwnerId, "Repas A", "", Season.AllYear, MealStyle.Quick, 10),
+            new Meal(OwnerId, "Repas B", "", Season.AllYear, MealStyle.Quick, 20),
+            new Meal(OwnerId, "Repas C", "", Season.AllYear, MealStyle.Quick, 30));
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var handler = new GenerateMealIdeasHandler(dbContext);
+        var handler = new GenerateMealIdeasHandler(dbContext, _currentUser);
         var query = new GenerateMealIdeasQuery(null, null, null, null, Days: 2);
 
         var result = await handler.HandleAsync(query, cancellationToken);
@@ -60,15 +64,15 @@ public sealed class GenerateMealIdeasHandlerTests(MySqlFixture fixture)
         await using var dbContext = await CreateFreshDbContextAsync(cancellationToken);
 
         // L'omelette est plus rapide : sans priorité elle passerait devant.
-        var omelette = new Meal("Omelette", "Rapide", Season.AllYear, MealStyle.Quick, 10);
+        var omelette = new Meal(OwnerId, "Omelette", "Rapide", Season.AllYear, MealStyle.Quick, 10);
         omelette.AddIngredient("œuf");
-        var tomatoSoup = new Meal("Soupe de tomate", "Veloutée", Season.Autumn, MealStyle.Healthy, 20);
+        var tomatoSoup = new Meal(OwnerId, "Soupe de tomate", "Veloutée", Season.Autumn, MealStyle.Healthy, 20);
         tomatoSoup.AddIngredient("tomate");
         tomatoSoup.AddIngredient("oignon");
         dbContext.Meals.AddRange(omelette, tomatoSoup);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var handler = new GenerateMealIdeasHandler(dbContext);
+        var handler = new GenerateMealIdeasHandler(dbContext, _currentUser);
         var query = new GenerateMealIdeasQuery(null, null, null, IncludeIngredients: ["tomate"], Days: 7);
 
         var result = await handler.HandleAsync(query, cancellationToken);
@@ -89,12 +93,12 @@ public sealed class GenerateMealIdeasHandlerTests(MySqlFixture fixture)
         var cancellationToken = TestContext.Current.CancellationToken;
         await using var dbContext = await CreateFreshDbContextAsync(cancellationToken);
 
-        var gratin = new Meal("Gratin", "Fondant", Season.Winter, MealStyle.Comforting, 45);
+        var gratin = new Meal(OwnerId, "Gratin", "Fondant", Season.Winter, MealStyle.Comforting, 45);
         gratin.AddIngredient("Gruyère râpé");
         dbContext.Meals.Add(gratin);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var handler = new GenerateMealIdeasHandler(dbContext);
+        var handler = new GenerateMealIdeasHandler(dbContext, _currentUser);
         var query = new GenerateMealIdeasQuery(null, null, null, IncludeIngredients: ["gruyere"], Days: 7);
 
         var result = await handler.HandleAsync(query, cancellationToken);
@@ -112,16 +116,16 @@ public sealed class GenerateMealIdeasHandlerTests(MySqlFixture fixture)
 
         // Deux recettes ne reposant que sur le jambon : une seule tranche ne fait pas les deux plats,
         // et la seconde ne doit pas non plus revenir comme repas de complément.
-        var omelette = new Meal("Omelette au jambon", "Rapide", Season.AllYear, MealStyle.Quick, 10);
+        var omelette = new Meal(OwnerId, "Omelette au jambon", "Rapide", Season.AllYear, MealStyle.Quick, 10);
         omelette.AddIngredient("œuf");
         omelette.AddIngredient("jambon");
-        var salad = new Meal("Salade au jambon", "Fraîche", Season.AllYear, MealStyle.Light, 15);
+        var salad = new Meal(OwnerId, "Salade au jambon", "Fraîche", Season.AllYear, MealStyle.Light, 15);
         salad.AddIngredient("salade");
         salad.AddIngredient("jambon");
         dbContext.Meals.AddRange(omelette, salad);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var handler = new GenerateMealIdeasHandler(dbContext);
+        var handler = new GenerateMealIdeasHandler(dbContext, _currentUser);
         var query = new GenerateMealIdeasQuery(null, null, null, IncludeIngredients: ["jambon"], Days: 7);
 
         var result = await handler.HandleAsync(query, cancellationToken);
@@ -138,16 +142,16 @@ public sealed class GenerateMealIdeasHandlerTests(MySqlFixture fixture)
         var cancellationToken = TestContext.Current.CancellationToken;
         await using var dbContext = await CreateFreshDbContextAsync(cancellationToken);
 
-        var salad = new Meal("Salade au jambon", "Fraîche", Season.AllYear, MealStyle.Light, 15);
+        var salad = new Meal(OwnerId, "Salade au jambon", "Fraîche", Season.AllYear, MealStyle.Light, 15);
         salad.AddIngredient("jambon");
         salad.AddIngredient("tomate");
-        var gratin = new Meal("Gratin au gruyère", "Fondant", Season.AllYear, MealStyle.Comforting, 45);
+        var gratin = new Meal(OwnerId, "Gratin au gruyère", "Fondant", Season.AllYear, MealStyle.Comforting, 45);
         gratin.AddIngredient("gruyère");
         gratin.AddIngredient("pomme de terre");
         dbContext.Meals.AddRange(salad, gratin);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var handler = new GenerateMealIdeasHandler(dbContext);
+        var handler = new GenerateMealIdeasHandler(dbContext, _currentUser);
         var query = new GenerateMealIdeasQuery(null, null, null, IncludeIngredients: ["jambon", "gruyère"], Days: 7);
 
         var result = await handler.HandleAsync(query, cancellationToken);
@@ -166,11 +170,11 @@ public sealed class GenerateMealIdeasHandlerTests(MySqlFixture fixture)
 
         for (var index = 0; index < 5; index++)
         {
-            dbContext.Meals.Add(new Meal($"Repas {index}", "", Season.AllYear, MealStyle.Quick, 10 + index));
+            dbContext.Meals.Add(new Meal(OwnerId, $"Repas {index}", "", Season.AllYear, MealStyle.Quick, 10 + index));
         }
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var handler = new GenerateMealIdeasHandler(dbContext);
+        var handler = new GenerateMealIdeasHandler(dbContext, _currentUser);
         var query = new GenerateMealIdeasQuery(null, null, null, null, Days: 3);
 
         var result = await handler.HandleAsync(query, cancellationToken);

@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Modules\Identity\MealPlanner.Modules.Identity\MealPlanner.Modules.Identity.csproj" />
+    <ProjectReference Include="..\..\src\BuildingBlocks\MealPlanner.SharedKernel\MealPlanner.SharedKernel.csproj" />
+  </ItemGroup>
+</Project>

@@ -19,6 +19,10 @@ public sealed class MealPlannerApiFactory : WebApplicationFactory<Program>
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
                 ["ConnectionStrings:MealsDb"] = "server=localhost;port=3306;database=test;user=root;password=root",
+                ["ConnectionStrings:IdentityDb"] = "server=localhost;port=3306;database=test;user=root;password=root",
+                ["Jwt:Issuer"] = "MealPlanner.Tests",
+                ["Jwt:Audience"] = "MealPlanner.Tests",
+                ["Jwt:SigningKey"] = "functional-tests-signing-key-at-least-32-bytes-long!!",
             });
         });
     }

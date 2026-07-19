@@ -14,6 +14,11 @@
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageVersion Include="FluentValidation" Version="12.1.1" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+    <!-- Auth : Identity (email/mdp) + JWT + validation des id_token Google -->
+    <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.19.2" />
+    <PackageVersion Include="Google.Apis.Auth" Version="1.75.0" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
     <!-- Pin transitif : Microsoft.OpenApi 2.0.0 (tiré par AspNetCore.OpenApi) a une vuln NU1903 -->
     <PackageVersion Include="Microsoft.OpenApi" Version="2.11.0" />

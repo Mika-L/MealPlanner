@@ -22,7 +22,6 @@ namespace MealPlanner.Modules.Meals.Infrastructure.Migrations
             modelBuilder.Entity("MealPlanner.Modules.Meals.Domain.Meal", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
                     b.Property<string>("Description")
@@ -35,6 +34,9 @@ namespace MealPlanner.Modules.Meals.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("varchar(200)");
 
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("char(36)");
+
                     b.Property<int>("PrepTimeMinutes")
                         .HasColumnType("int");
 
@@ -46,13 +48,14 @@ namespace MealPlanner.Modules.Meals.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("OwnerId");
+
                     b.ToTable("Meals_Meals", (string)null);
                 });
 
             modelBuilder.Entity("MealPlanner.Modules.Meals.Domain.MealIngredient", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
                     b.Property<Guid>("MealId")

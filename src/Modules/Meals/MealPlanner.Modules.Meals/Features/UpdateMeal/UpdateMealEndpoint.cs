@@ -14,6 +14,7 @@ internal static class UpdateMealEndpoint
     public static void Map(IEndpointRouteBuilder endpoints)
     {
         endpoints.MapPut("/api/meals/{id:guid}", HandleAsync)
+            .RequireAuthorization()
             .WithName("UpdateMeal")
             .WithTags("Meals")
             .WithSummary("Met à jour une recette existante.");
