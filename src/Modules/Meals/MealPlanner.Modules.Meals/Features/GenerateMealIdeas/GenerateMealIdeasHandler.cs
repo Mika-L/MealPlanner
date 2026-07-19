@@ -4,20 +4,23 @@ using System.Text;
 using MealPlanner.Modules.Meals.Domain;
 using MealPlanner.Modules.Meals.Infrastructure;
 using MealPlanner.SharedKernel.Cqrs;
+using MealPlanner.SharedKernel.Identity;
 using MealPlanner.SharedKernel.Results;
 
 using Microsoft.EntityFrameworkCore;
 
 namespace MealPlanner.Modules.Meals.Features.GenerateMealIdeas;
 
-internal sealed class GenerateMealIdeasHandler(MealsDbContext dbContext)
+internal sealed class GenerateMealIdeasHandler(MealsDbContext dbContext, ICurrentUser currentUser)
     : IQueryHandler<GenerateMealIdeasQuery, Result<GenerateMealIdeasResponse>>
 {
     public async Task<Result<GenerateMealIdeasResponse>> HandleAsync(
         GenerateMealIdeasQuery query,
         CancellationToken cancellationToken)
     {
+        // Les idées ne piochent que dans le catalogue de l'utilisateur courant.
         var meals = dbContext.Meals
+            .Where(meal => meal.OwnerId == currentUser.UserId)
             .Include(meal => meal.Ingredients)
             .AsQueryable();
 

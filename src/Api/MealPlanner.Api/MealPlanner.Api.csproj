@@ -8,5 +8,6 @@
   <ItemGroup>
     <ProjectReference Include="..\..\BuildingBlocks\MealPlanner.SharedKernel\MealPlanner.SharedKernel.csproj" />
     <ProjectReference Include="..\..\Modules\Meals\MealPlanner.Modules.Meals\MealPlanner.Modules.Meals.csproj" />
+    <ProjectReference Include="..\..\Modules\Identity\MealPlanner.Modules.Identity\MealPlanner.Modules.Identity.csproj" />
   </ItemGroup>
 </Project>

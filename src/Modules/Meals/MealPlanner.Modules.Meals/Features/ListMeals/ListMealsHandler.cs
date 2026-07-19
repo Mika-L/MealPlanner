@@ -1,20 +1,22 @@
 using MealPlanner.Modules.Meals.Domain;
 using MealPlanner.Modules.Meals.Infrastructure;
 using MealPlanner.SharedKernel.Cqrs;
+using MealPlanner.SharedKernel.Identity;
 using MealPlanner.SharedKernel.Results;
 
 using Microsoft.EntityFrameworkCore;
 
 namespace MealPlanner.Modules.Meals.Features.ListMeals;
 
-internal sealed class ListMealsHandler(MealsDbContext dbContext)
+internal sealed class ListMealsHandler(MealsDbContext dbContext, ICurrentUser currentUser)
     : IQueryHandler<ListMealsQuery, Result<ListMealsResponse>>
 {
     public async Task<Result<ListMealsResponse>> HandleAsync(
         ListMealsQuery query,
         CancellationToken cancellationToken)
     {
-        var filtered = dbContext.Meals.AsQueryable();
+        // Chaque utilisateur ne voit que ses propres recettes.
+        var filtered = dbContext.Meals.Where(meal => meal.OwnerId == currentUser.UserId);
 
         var search = query.Search?.Trim();
         if (!string.IsNullOrEmpty(search))

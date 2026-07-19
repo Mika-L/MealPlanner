@@ -22,6 +22,7 @@ internal static class GenerateMealIdeasEndpoint
     public static void Map(IEndpointRouteBuilder endpoints)
     {
         endpoints.MapPost("/api/meals/ideas", HandleAsync)
+            .RequireAuthorization()
             .WithName("GenerateMealIdeas")
             .WithTags("Meals")
             .WithSummary("Génère des idées de repas selon les critères fournis.");

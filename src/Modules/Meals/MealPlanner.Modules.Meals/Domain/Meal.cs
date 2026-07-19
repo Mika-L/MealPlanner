@@ -10,9 +10,10 @@ public sealed class Meal
     {
     }
 
-    public Meal(string name, string description, Season seasons, MealStyle styles, int prepTimeMinutes)
+    public Meal(Guid ownerId, string name, string description, Season seasons, MealStyle styles, int prepTimeMinutes)
     {
         Id = Guid.CreateVersion7();
+        OwnerId = ownerId;
         Name = name;
         Description = description;
         Seasons = seasons;
@@ -21,6 +22,9 @@ public sealed class Meal
     }
 
     public Guid Id { get; private set; }
+
+    /// <summary>Utilisateur propriétaire de la recette : chaque recette appartient à un seul utilisateur.</summary>
+    public Guid OwnerId { get; private set; }
 
     public string Name { get; private set; } = string.Empty;
 
