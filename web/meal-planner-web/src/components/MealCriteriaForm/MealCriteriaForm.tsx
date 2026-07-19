@@ -103,7 +103,7 @@ export function MealCriteriaForm({ onSubmit }: MealCriteriaFormProps) {
       </button>
 
       {ingredients.length > 0 && (
-        <ul aria-label="Ingrédients ajoutés">
+        <ul className="recipe-form__ingredients" aria-label="Ingrédients ajoutés">
           {ingredients.map((ingredient) => (
             <li key={ingredient}>
               {ingredient}
