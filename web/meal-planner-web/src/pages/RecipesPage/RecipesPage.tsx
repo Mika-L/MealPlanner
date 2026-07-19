@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import {
   createRecipe,
@@ -10,86 +10,73 @@ import type { Recipe, RecipeInput } from '../../api/types'
 import { RecipeForm } from '../../components/RecipeForm/RecipeForm'
 
 type Mode = { kind: 'list' } | { kind: 'create' } | { kind: 'edit'; recipe: Recipe }
+type Status = 'loading' | 'loadingMore' | 'error' | 'idle'
 
-// Nombre de cartes rendues par palier : borne le DOM même avec des centaines de recettes.
-const RECIPES_PER_PAGE = 24
+// Taille de page demandée à l'API : borne le volume transféré et rendu, même avec des centaines de recettes.
+const PAGE_SIZE = 24
 
 export function RecipesPage() {
   const [recipes, setRecipes] = useState<Recipe[]>([])
-  const [status, setStatus] = useState<'loading' | 'error' | 'idle'>('loading')
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [status, setStatus] = useState<Status>('loading')
   const [mode, setMode] = useState<Mode>({ kind: 'list' })
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [visibleCount, setVisibleCount] = useState(RECIPES_PER_PAGE)
 
-  const refresh = () => {
-    setStatus('loading')
-    listRecipes()
-      .then((loaded) => {
-        setRecipes(loaded)
+  // Annule la requête précédente : une recherche rapide ou un « Afficher plus » ne doit jamais
+  // laisser une réponse tardive écraser la plus récente.
+  const requestRef = useRef<AbortController | null>(null)
+
+  const load = useCallback((term: string, pageToLoad: number, append: boolean) => {
+    requestRef.current?.abort()
+    const controller = new AbortController()
+    requestRef.current = controller
+    setStatus(append ? 'loadingMore' : 'loading')
+
+    listRecipes({ search: term, page: pageToLoad, pageSize: PAGE_SIZE }, controller.signal)
+      .then((result) => {
+        setRecipes((previous) => (append ? [...previous, ...result.recipes] : result.recipes))
+        setTotal(result.total)
+        setPage(result.page)
         setStatus('idle')
       })
-      .catch(() => setStatus('error'))
-  }
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setStatus('error')
+        }
+      })
+  }, [])
 
-  useEffect(refresh, [])
-
-  // Découple la frappe du filtrage : on ne balaie les recettes qu'après une courte pause.
+  // Découple la frappe des requêtes : on n'interroge l'API qu'après une courte pause.
   useEffect(() => {
-    const timeout = setTimeout(() => setDebouncedSearch(search), 150)
+    const timeout = setTimeout(() => setDebouncedSearch(search), 250)
     return () => clearTimeout(timeout)
   }, [search])
+
+  // Toute nouvelle recherche (et le premier rendu) repart de la page 1.
+  useEffect(() => {
+    load(debouncedSearch, 1, false)
+  }, [debouncedSearch, load])
 
   const handleCreate = async (input: RecipeInput) => {
     await createRecipe(input)
     setMode({ kind: 'list' })
-    refresh()
+    load(debouncedSearch, 1, false)
   }
 
   const handleUpdate = (id: string) => async (input: RecipeInput) => {
     await updateRecipe(id, input)
     setMode({ kind: 'list' })
-    refresh()
+    load(debouncedSearch, 1, false)
   }
 
   const handleDelete = async (id: string) => {
     await deleteRecipe(id)
     setPendingDelete(null)
-    refresh()
+    load(debouncedSearch, 1, false)
   }
-
-  // Index de recherche pré-calculé une fois par liste : évite de reconstruire les chaînes à chaque frappe.
-  const searchIndex = useMemo(
-    () =>
-      recipes.map((recipe) => ({
-        recipe,
-        haystack: [
-          recipe.name,
-          recipe.description,
-          ...recipe.ingredients,
-          ...recipe.styles,
-          ...recipe.seasons,
-        ]
-          .join(' ')
-          .toLowerCase(),
-      })),
-    [recipes],
-  )
-
-  const query = debouncedSearch.trim().toLowerCase()
-  const filteredRecipes = useMemo(
-    () =>
-      query
-        ? searchIndex.filter((entry) => entry.haystack.includes(query)).map((entry) => entry.recipe)
-        : recipes,
-    [searchIndex, recipes, query],
-  )
-
-  // Repart du premier palier quand la recherche change.
-  useEffect(() => {
-    setVisibleCount(RECIPES_PER_PAGE)
-  }, [query])
 
   if (mode.kind === 'create') {
     return (
@@ -119,8 +106,9 @@ export function RecipesPage() {
     )
   }
 
-  const visibleRecipes = filteredRecipes.slice(0, visibleCount)
-  const remaining = filteredRecipes.length - visibleRecipes.length
+  const activeSearch = debouncedSearch.trim()
+  const showSearch = total > 0 || activeSearch !== ''
+  const remaining = total - recipes.length
 
   return (
     <>
@@ -131,7 +119,7 @@ export function RecipesPage() {
         </button>
       </div>
 
-      {status === 'idle' && recipes.length > 0 && (
+      {showSearch && (
         <div className="recipes__search">
           <input
             type="text"
@@ -140,11 +128,11 @@ export function RecipesPage() {
             placeholder="Rechercher une recette, un ingrédient, un style…"
             aria-label="Rechercher une recette"
           />
-          {filteredRecipes.length > 0 && (
+          {total > 0 && (
             <p className="recipes__count" role="status">
-              {query
-                ? `${filteredRecipes.length} résultat${filteredRecipes.length > 1 ? 's' : ''} sur ${recipes.length}`
-                : `${recipes.length} recette${recipes.length > 1 ? 's' : ''}`}
+              {activeSearch
+                ? `${total} résultat${total > 1 ? 's' : ''}`
+                : `${total} recette${total > 1 ? 's' : ''}`}
             </p>
           )}
         </div>
@@ -157,16 +145,16 @@ export function RecipesPage() {
         </p>
       )}
 
-      {status === 'idle' && recipes.length === 0 && (
+      {status === 'idle' && total === 0 && activeSearch === '' && (
         <p role="status">Aucune recette pour l'instant. Ajoute la première !</p>
       )}
 
-      {status === 'idle' && recipes.length > 0 && filteredRecipes.length === 0 && (
-        <p role="status">Aucune recette ne correspond à « {query} ».</p>
+      {status === 'idle' && total === 0 && activeSearch !== '' && (
+        <p role="status">Aucune recette ne correspond à « {activeSearch} ».</p>
       )}
 
       <ul className="app__results">
-        {visibleRecipes.map((recipe) => (
+        {recipes.map((recipe) => (
           <li key={recipe.id} className="app__card">
             <h2>{recipe.name}</h2>
             {recipe.styles.length > 0 && (
@@ -219,9 +207,12 @@ export function RecipesPage() {
         <div className="recipes__more">
           <button
             type="button"
-            onClick={() => setVisibleCount((count) => count + RECIPES_PER_PAGE)}
+            disabled={status === 'loadingMore'}
+            onClick={() => load(debouncedSearch, page + 1, true)}
           >
-            Afficher plus ({remaining} restante{remaining > 1 ? 's' : ''})
+            {status === 'loadingMore'
+              ? 'Chargement…'
+              : `Afficher plus (${remaining} restante${remaining > 1 ? 's' : ''})`}
           </button>
         </div>
       )}
