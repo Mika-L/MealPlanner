@@ -1,4 +1,5 @@
 import type { Recipe, RecipeInput } from './types'
+import { apiFetch } from './client'
 
 export interface ListRecipesParams {
   search?: string
@@ -36,7 +37,7 @@ export async function listRecipes(
   }
 
   const queryString = query.toString()
-  const response = await fetch(`/api/meals${queryString ? `?${queryString}` : ''}`, { signal })
+  const response = await apiFetch(`/api/meals${queryString ? `?${queryString}` : ''}`, { signal })
 
   if (!response.ok) {
     throw new Error(`Le chargement des recettes a échoué (HTTP ${response.status}).`)
@@ -52,7 +53,7 @@ export async function listRecipes(
 }
 
 export async function createRecipe(input: RecipeInput, signal?: AbortSignal): Promise<string> {
-  const response = await fetch('/api/meals', {
+  const response = await apiFetch('/api/meals', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
@@ -72,7 +73,7 @@ export async function updateRecipe(
   input: RecipeInput,
   signal?: AbortSignal,
 ): Promise<void> {
-  const response = await fetch(`/api/meals/${id}`, {
+  const response = await apiFetch(`/api/meals/${id}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(input),
@@ -85,7 +86,7 @@ export async function updateRecipe(
 }
 
 export async function deleteRecipe(id: string, signal?: AbortSignal): Promise<void> {
-  const response = await fetch(`/api/meals/${id}`, { method: 'DELETE', signal })
+  const response = await apiFetch(`/api/meals/${id}`, { method: 'DELETE', signal })
 
   if (!response.ok) {
     throw new Error(`La suppression de la recette a échoué (HTTP ${response.status}).`)
