@@ -10,11 +10,16 @@
   <Folder Name="/src/Modules/Meals/">
     <Project Path="src/Modules/Meals/MealPlanner.Modules.Meals/MealPlanner.Modules.Meals.csproj" />
   </Folder>
+  <Folder Name="/src/Modules/Identity/">
+    <Project Path="src/Modules/Identity/MealPlanner.Modules.Identity/MealPlanner.Modules.Identity.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/MealPlanner.Api.FunctionalTests/MealPlanner.Api.FunctionalTests.csproj" />
     <Project Path="tests/MealPlanner.ArchitectureTests/MealPlanner.ArchitectureTests.csproj" />
     <Project Path="tests/MealPlanner.Modules.Meals.IntegrationTests/MealPlanner.Modules.Meals.IntegrationTests.csproj" />
     <Project Path="tests/MealPlanner.Modules.Meals.UnitTests/MealPlanner.Modules.Meals.UnitTests.csproj" />
+    <Project Path="tests/MealPlanner.Modules.Identity.IntegrationTests/MealPlanner.Modules.Identity.IntegrationTests.csproj" />
+    <Project Path="tests/MealPlanner.Modules.Identity.UnitTests/MealPlanner.Modules.Identity.UnitTests.csproj" />
     <Project Path="tests/MealPlanner.SharedKernel.UnitTests/MealPlanner.SharedKernel.UnitTests.csproj" />
   </Folder>
 </Solution>

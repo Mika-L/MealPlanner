@@ -12,6 +12,7 @@ internal static class DeleteMealEndpoint
     public static void Map(IEndpointRouteBuilder endpoints)
     {
         endpoints.MapDelete("/api/meals/{id:guid}", HandleAsync)
+            .RequireAuthorization()
             .WithName("DeleteMeal")
             .WithTags("Meals")
             .WithSummary("Supprime une recette du catalogue.");

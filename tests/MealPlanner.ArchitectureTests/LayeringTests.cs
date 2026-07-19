@@ -11,9 +11,12 @@ public sealed class LayeringTests
 {
     private static readonly Assembly SharedKernel = typeof(IDispatcher).Assembly;
     private static readonly Assembly MealsModule = typeof(MealsModule).Assembly;
+    private static readonly Assembly IdentityModule = typeof(Modules.Identity.IdentityModule).Assembly;
 
     private const string ApiNamespace = "MealPlanner.Api";
     private const string ModulesNamespace = "MealPlanner.Modules";
+    private const string MealsModuleNamespace = "MealPlanner.Modules.Meals";
+    private const string IdentityModuleNamespace = "MealPlanner.Modules.Identity";
 
     [Fact]
     public void SharedKernel_should_not_depend_on_any_module_or_the_api()
@@ -39,6 +42,41 @@ public sealed class LayeringTests
         result.IsSuccessful.Should().BeTrue(
             "un module ne connaît pas son hôte : {0}",
             string.Join(", ", result.FailingTypeNames ?? []));
+    }
+
+    [Fact]
+    public void Identity_module_should_not_depend_on_the_api_host()
+    {
+        var result = Types.InAssembly(IdentityModule)
+            .ShouldNot()
+            .HaveDependencyOn(ApiNamespace)
+            .GetResult();
+
+        result.IsSuccessful.Should().BeTrue(
+            "un module ne connaît pas son hôte : {0}",
+            string.Join(", ", result.FailingTypeNames ?? []));
+    }
+
+    [Fact]
+    public void Meals_and_Identity_modules_should_not_depend_on_each_other()
+    {
+        var mealsOnIdentity = Types.InAssembly(MealsModule)
+            .ShouldNot()
+            .HaveDependencyOn(IdentityModuleNamespace)
+            .GetResult();
+
+        mealsOnIdentity.IsSuccessful.Should().BeTrue(
+            "Meals ne dépend pas d'Identity (communication via SharedKernel) : {0}",
+            string.Join(", ", mealsOnIdentity.FailingTypeNames ?? []));
+
+        var identityOnMeals = Types.InAssembly(IdentityModule)
+            .ShouldNot()
+            .HaveDependencyOn(MealsModuleNamespace)
+            .GetResult();
+
+        identityOnMeals.IsSuccessful.Should().BeTrue(
+            "Identity ne dépend pas de Meals (communication via SharedKernel) : {0}",
+            string.Join(", ", identityOnMeals.FailingTypeNames ?? []));
     }
 
     [Fact]
