@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import {
   createRecipe,
@@ -11,12 +11,17 @@ import { RecipeForm } from '../../components/RecipeForm/RecipeForm'
 
 type Mode = { kind: 'list' } | { kind: 'create' } | { kind: 'edit'; recipe: Recipe }
 
+// Nombre de cartes rendues par palier : borne le DOM même avec des centaines de recettes.
+const RECIPES_PER_PAGE = 24
+
 export function RecipesPage() {
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [status, setStatus] = useState<'loading' | 'error' | 'idle'>('loading')
   const [mode, setMode] = useState<Mode>({ kind: 'list' })
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
   const [search, setSearch] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [visibleCount, setVisibleCount] = useState(RECIPES_PER_PAGE)
 
   const refresh = () => {
     setStatus('loading')
@@ -29,6 +34,12 @@ export function RecipesPage() {
   }
 
   useEffect(refresh, [])
+
+  // Découple la frappe du filtrage : on ne balaie les recettes qu'après une courte pause.
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedSearch(search), 150)
+    return () => clearTimeout(timeout)
+  }, [search])
 
   const handleCreate = async (input: RecipeInput) => {
     await createRecipe(input)
@@ -48,10 +59,12 @@ export function RecipesPage() {
     refresh()
   }
 
-  const query = search.trim().toLowerCase()
-  const filteredRecipes = query
-    ? recipes.filter((recipe) =>
-        [
+  // Index de recherche pré-calculé une fois par liste : évite de reconstruire les chaînes à chaque frappe.
+  const searchIndex = useMemo(
+    () =>
+      recipes.map((recipe) => ({
+        recipe,
+        haystack: [
           recipe.name,
           recipe.description,
           ...recipe.ingredients,
@@ -59,10 +72,24 @@ export function RecipesPage() {
           ...recipe.seasons,
         ]
           .join(' ')
-          .toLowerCase()
-          .includes(query),
-      )
-    : recipes
+          .toLowerCase(),
+      })),
+    [recipes],
+  )
+
+  const query = debouncedSearch.trim().toLowerCase()
+  const filteredRecipes = useMemo(
+    () =>
+      query
+        ? searchIndex.filter((entry) => entry.haystack.includes(query)).map((entry) => entry.recipe)
+        : recipes,
+    [searchIndex, recipes, query],
+  )
+
+  // Repart du premier palier quand la recherche change.
+  useEffect(() => {
+    setVisibleCount(RECIPES_PER_PAGE)
+  }, [query])
 
   if (mode.kind === 'create') {
     return (
@@ -92,6 +119,9 @@ export function RecipesPage() {
     )
   }
 
+  const visibleRecipes = filteredRecipes.slice(0, visibleCount)
+  const remaining = filteredRecipes.length - visibleRecipes.length
+
   return (
     <>
       <div className="recipes__header">
@@ -110,6 +140,13 @@ export function RecipesPage() {
             placeholder="Rechercher une recette, un ingrédient, un style…"
             aria-label="Rechercher une recette"
           />
+          {filteredRecipes.length > 0 && (
+            <p className="recipes__count" role="status">
+              {query
+                ? `${filteredRecipes.length} résultat${filteredRecipes.length > 1 ? 's' : ''} sur ${recipes.length}`
+                : `${recipes.length} recette${recipes.length > 1 ? 's' : ''}`}
+            </p>
+          )}
         </div>
       )}
 
@@ -125,11 +162,11 @@ export function RecipesPage() {
       )}
 
       {status === 'idle' && recipes.length > 0 && filteredRecipes.length === 0 && (
-        <p role="status">Aucune recette ne correspond à « {search.trim()} ».</p>
+        <p role="status">Aucune recette ne correspond à « {query} ».</p>
       )}
 
       <ul className="app__results">
-        {filteredRecipes.map((recipe) => (
+        {visibleRecipes.map((recipe) => (
           <li key={recipe.id} className="app__card">
             <h2>{recipe.name}</h2>
             {recipe.styles.length > 0 && (
@@ -177,6 +214,17 @@ export function RecipesPage() {
           </li>
         ))}
       </ul>
+
+      {remaining > 0 && (
+        <div className="recipes__more">
+          <button
+            type="button"
+            onClick={() => setVisibleCount((count) => count + RECIPES_PER_PAGE)}
+          >
+            Afficher plus ({remaining} restante{remaining > 1 ? 's' : ''})
+          </button>
+        </div>
+      )}
     </>
   )
 }

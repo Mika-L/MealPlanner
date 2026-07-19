@@ -335,6 +335,18 @@ button[type='submit']:hover,
   width: 100%;
 }
 
+.recipes__count {
+  margin: 0.6rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-soft);
+}
+
+.recipes__more {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.75rem;
+}
+
 /* ---------- Formulaire recette ---------- */
 
 .recipe-form {
