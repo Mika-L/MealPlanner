@@ -43,7 +43,7 @@
   border-radius: 14px;
   font-size: 1.2rem;
   background: var(--grad-warm);
-  box-shadow: 0 6px 16px -6px rgba(255, 84, 112, 0.6);
+  box-shadow: 0 6px 16px -6px rgba(var(--accent-glow), 0.6);
 }
 
 .app__logo-accent {
@@ -80,7 +80,7 @@
 .app__nav a.active {
   color: #fff;
   background: var(--grad-warm);
-  box-shadow: 0 6px 16px -6px rgba(255, 84, 112, 0.65);
+  box-shadow: 0 6px 16px -6px rgba(var(--accent-glow), 0.65);
 }
 
 /* ---------- Titres de page ---------- */
@@ -199,7 +199,7 @@ button[type='submit'],
   color: #fff;
   border-color: transparent;
   background: var(--grad-warm);
-  box-shadow: 0 10px 22px -10px rgba(255, 84, 112, 0.7);
+  box-shadow: 0 10px 22px -10px rgba(var(--accent-glow), 0.7);
 }
 
 button[type='submit']:hover,
@@ -309,7 +309,7 @@ button[type='submit']:hover,
   font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.01em;
-  box-shadow: 0 4px 10px -4px rgba(255, 84, 112, 0.5);
+  box-shadow: 0 4px 10px -4px rgba(var(--accent-glow), 0.5);
 }
 
 /* ---------- En-tête liste recettes ---------- */
@@ -415,7 +415,7 @@ button[type='submit']:hover,
 
 .recipe-form__ingredients li button:hover {
   transform: none;
-  background: rgba(255, 77, 109, 0.18);
+  background: rgba(var(--accent-glow), 0.18);
   box-shadow: none;
 }
 
@@ -441,4 +441,118 @@ button[type='submit']:hover,
   font-size: 0.88rem;
   font-weight: 600;
   color: var(--accent-strong);
+}
+
+/* ---------- Page Préférences ---------- */
+
+.prefs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  max-width: 640px;
+}
+
+.prefs h2 {
+  margin-top: 0.5rem;
+}
+
+.prefs__hint {
+  color: var(--text-soft);
+  font-size: 0.98rem;
+  margin-bottom: 0.4rem;
+  max-width: 52ch;
+}
+
+.prefs__themes {
+  display: grid;
+  gap: 1rem;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  min-inline-size: 0;
+}
+
+.prefs__legend {
+  padding: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.prefs__theme {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.prefs__theme:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.prefs__theme--active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-bg), var(--shadow-md);
+}
+
+/* Radio accessible mais masqué visuellement : la carte porte l'état sélectionné */
+.prefs__theme input[type='radio'] {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.prefs__swatches {
+  display: inline-grid;
+  grid-template-columns: repeat(2, 1.4rem);
+  grid-auto-rows: 1.4rem;
+  gap: 0.25rem;
+  padding: 0.35rem;
+  border-radius: 12px;
+  background: var(--field-bg);
+  border: 1px solid var(--border);
+}
+
+.prefs__swatch {
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 7px;
+  border: 1px solid var(--border-strong);
+}
+
+.prefs__theme-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.prefs__theme-name {
+  font-family: var(--display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--text-h);
+}
+
+.prefs__theme-desc {
+  color: var(--text-soft);
+  font-size: 0.92rem;
+  line-height: 1.4;
 }
