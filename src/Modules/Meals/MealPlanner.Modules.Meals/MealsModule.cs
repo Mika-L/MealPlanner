@@ -1,0 +1,48 @@
+using FluentValidation;
+
+using MealPlanner.Modules.Meals.Features.GenerateMealIdeas;
+using MealPlanner.Modules.Meals.Infrastructure;
+using MealPlanner.SharedKernel.Cqrs;
+
+using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace MealPlanner.Modules.Meals;
+
+/// <summary>Composition du module Meals : persistance, handlers CQRS, validateurs, endpoints.</summary>
+public static class MealsModule
+{
+    public const string ConnectionStringName = "MealsDb";
+
+    public static IServiceCollection AddMealsModule(this IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = configuration.GetConnectionString(ConnectionStringName)
+            ?? throw new InvalidOperationException($"Chaîne de connexion '{ConnectionStringName}' introuvable.");
+
+        services.AddDbContext<MealsDbContext>(options => options.UseMySQL(connectionString));
+
+        services.AddDispatcher();
+        services.AddCqrsHandlersFromAssembly(typeof(MealsModule).Assembly);
+        services.AddValidatorsFromAssemblyContaining<GenerateMealIdeasValidator>(includeInternalTypes: true);
+
+        return services;
+    }
+
+    public static IEndpointRouteBuilder MapMealsModule(this IEndpointRouteBuilder endpoints)
+    {
+        GenerateMealIdeasEndpoint.Map(endpoints);
+        return endpoints;
+    }
+
+    /// <summary>Applique les migrations puis alimente le catalogue (idempotent). À appeler au démarrage.</summary>
+    public static async Task InitializeMealsModuleAsync(this IServiceProvider services, CancellationToken cancellationToken = default)
+    {
+        await using var scope = services.CreateAsyncScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<MealsDbContext>();
+
+        await dbContext.Database.MigrateAsync(cancellationToken);
+        await MealsDataSeeder.SeedAsync(dbContext, cancellationToken);
+    }
+}

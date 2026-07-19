@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <ItemGroup>
+    <PackageReference Include="Serilog.AspNetCore" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Scalar.AspNetCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\BuildingBlocks\MealPlanner.SharedKernel\MealPlanner.SharedKernel.csproj" />
+    <ProjectReference Include="..\..\Modules\Meals\MealPlanner.Modules.Meals\MealPlanner.Modules.Meals.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="NetArchTest.Rules" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Api\MealPlanner.Api\MealPlanner.Api.csproj" />
+    <ProjectReference Include="..\..\src\Modules\Meals\MealPlanner.Modules.Meals\MealPlanner.Modules.Meals.csproj" />
+    <ProjectReference Include="..\..\src\BuildingBlocks\MealPlanner.SharedKernel\MealPlanner.SharedKernel.csproj" />
+  </ItemGroup>
+</Project>

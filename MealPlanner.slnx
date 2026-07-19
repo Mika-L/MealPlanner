@@ -1,0 +1,20 @@
+<Solution>
+  <Folder Name="/src/" />
+  <Folder Name="/src/Api/">
+    <Project Path="src/Api/MealPlanner.Api/MealPlanner.Api.csproj" />
+  </Folder>
+  <Folder Name="/src/BuildingBlocks/">
+    <Project Path="src/BuildingBlocks/MealPlanner.SharedKernel/MealPlanner.SharedKernel.csproj" />
+  </Folder>
+  <Folder Name="/src/Modules/" />
+  <Folder Name="/src/Modules/Meals/">
+    <Project Path="src/Modules/Meals/MealPlanner.Modules.Meals/MealPlanner.Modules.Meals.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/MealPlanner.Api.FunctionalTests/MealPlanner.Api.FunctionalTests.csproj" />
+    <Project Path="tests/MealPlanner.ArchitectureTests/MealPlanner.ArchitectureTests.csproj" />
+    <Project Path="tests/MealPlanner.Modules.Meals.IntegrationTests/MealPlanner.Modules.Meals.IntegrationTests.csproj" />
+    <Project Path="tests/MealPlanner.Modules.Meals.UnitTests/MealPlanner.Modules.Meals.UnitTests.csproj" />
+    <Project Path="tests/MealPlanner.SharedKernel.UnitTests/MealPlanner.SharedKernel.UnitTests.csproj" />
+  </Folder>
+</Solution>

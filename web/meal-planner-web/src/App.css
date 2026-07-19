@@ -1,0 +1,60 @@
+.app {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  text-align: left;
+}
+
+.app__lead {
+  color: #666;
+  margin-bottom: 1.5rem;
+}
+
+.app form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+  margin-bottom: 1.5rem;
+}
+
+.app form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.app form select,
+.app form button {
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+}
+
+.app__error {
+  color: #c0392b;
+}
+
+.app__results {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.app__card {
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+}
+
+.app__card h2 {
+  margin: 0 0 0.25rem;
+  font-size: 1.1rem;
+}
+
+.app__meta {
+  color: #666;
+  font-size: 0.9rem;
+  margin: 0.25rem 0 0;
+}
