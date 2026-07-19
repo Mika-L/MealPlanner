@@ -131,13 +131,59 @@ public sealed class MealCrudHandlersTests(MySqlFixture fixture)
             new Meal("Avocado toast", "Rapide", Season.AllYear, MealStyle.Quick, 5));
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var result = await new ListMealsHandler(dbContext).HandleAsync(new ListMealsQuery(), cancellationToken);
+        var result = await new ListMealsHandler(dbContext)
+            .HandleAsync(new ListMealsQuery(null, Page: 1, PageSize: 24), cancellationToken);
 
         result.IsSuccess.Should().BeTrue();
+        result.Value.Total.Should().Be(2);
         result.Value.Meals.Select(meal => meal.Name).Should().Equal("Avocado toast", "Zurek");
         // Season.AllYear est éclatée en ses quatre saisons atomiques.
         result.Value.Meals[0].Seasons
             .Should().BeEquivalentTo([Season.Spring, Season.Summer, Season.Autumn, Season.Winter]);
+    }
+
+    [Fact]
+    public async Task Should_filter_meals_by_search_term_on_name_description_or_ingredient()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var dbContext = await CreateFreshDbContextAsync(cancellationToken);
+
+        var byName = new Meal("Tarte à la tomate", "Estivale", Season.Summer, MealStyle.Light, 40);
+        var byIngredient = new Meal("Salade César", "Fraîche", Season.Summer, MealStyle.Light, 15);
+        byIngredient.AddIngredient("tomate cerise");
+        var unrelated = new Meal("Raclette", "Hivernale", Season.Winter, MealStyle.Comforting, 30);
+        dbContext.Meals.AddRange(byName, byIngredient, unrelated);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var result = await new ListMealsHandler(dbContext)
+            .HandleAsync(new ListMealsQuery("tomate", Page: 1, PageSize: 24), cancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Total.Should().Be(2);
+        result.Value.Meals.Select(meal => meal.Name).Should().BeEquivalentTo("Tarte à la tomate", "Salade César");
+    }
+
+    [Fact]
+    public async Task Should_paginate_meals_and_report_the_full_total()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var dbContext = await CreateFreshDbContextAsync(cancellationToken);
+
+        // Noms préfixés d'un indice pour un ordre alphabétique déterministe.
+        for (var index = 0; index < 5; index++)
+        {
+            dbContext.Meals.Add(new Meal($"Recette {index}", "", Season.AllYear, MealStyle.Quick, 10));
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var secondPage = await new ListMealsHandler(dbContext)
+            .HandleAsync(new ListMealsQuery(null, Page: 2, PageSize: 2), cancellationToken);
+
+        secondPage.IsSuccess.Should().BeTrue();
+        secondPage.Value.Total.Should().Be(5);
+        secondPage.Value.Page.Should().Be(2);
+        secondPage.Value.Meals.Select(meal => meal.Name).Should().Equal("Recette 2", "Recette 3");
     }
 
     private async Task<MealsDbContext> CreateFreshDbContextAsync(CancellationToken cancellationToken)
