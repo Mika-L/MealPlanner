@@ -13,6 +13,9 @@ internal sealed class MealConfiguration : IEntityTypeConfiguration<Meal>
 
         builder.HasKey(meal => meal.Id);
 
+        // Clé assignée par le domaine (Guid v7), voir MealIngredientConfiguration.
+        builder.Property(meal => meal.Id).ValueGeneratedNever();
+
         builder.Property(meal => meal.Name).HasMaxLength(200).IsRequired();
         builder.Property(meal => meal.Description).HasMaxLength(2000).IsRequired();
         builder.Property(meal => meal.Seasons).HasConversion<int>();

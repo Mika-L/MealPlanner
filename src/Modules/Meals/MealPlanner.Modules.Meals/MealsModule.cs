@@ -1,6 +1,10 @@
 using FluentValidation;
 
+using MealPlanner.Modules.Meals.Features.CreateMeal;
+using MealPlanner.Modules.Meals.Features.DeleteMeal;
 using MealPlanner.Modules.Meals.Features.GenerateMealIdeas;
+using MealPlanner.Modules.Meals.Features.ListMeals;
+using MealPlanner.Modules.Meals.Features.UpdateMeal;
 using MealPlanner.Modules.Meals.Infrastructure;
 using MealPlanner.SharedKernel.Cqrs;
 
@@ -33,6 +37,10 @@ public static class MealsModule
     public static IEndpointRouteBuilder MapMealsModule(this IEndpointRouteBuilder endpoints)
     {
         GenerateMealIdeasEndpoint.Map(endpoints);
+        ListMealsEndpoint.Map(endpoints);
+        CreateMealEndpoint.Map(endpoints);
+        UpdateMealEndpoint.Map(endpoints);
+        DeleteMealEndpoint.Map(endpoints);
         return endpoints;
     }
 

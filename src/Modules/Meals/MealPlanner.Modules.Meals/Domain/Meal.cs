@@ -38,4 +38,24 @@ public sealed class Meal
     {
         _ingredients.Add(new MealIngredient(Id, name));
     }
+
+    /// <summary>Met à jour les caractéristiques du repas (hors ingrédients, voir <see cref="ReplaceIngredients"/>).</summary>
+    public void Update(string name, string description, Season seasons, MealStyle styles, int prepTimeMinutes)
+    {
+        Name = name;
+        Description = description;
+        Seasons = seasons;
+        Styles = styles;
+        PrepTimeMinutes = prepTimeMinutes;
+    }
+
+    /// <summary>Remplace intégralement la liste des ingrédients par celle fournie.</summary>
+    public void ReplaceIngredients(IEnumerable<string> names)
+    {
+        _ingredients.Clear();
+        foreach (var name in names)
+        {
+            AddIngredient(name);
+        }
+    }
 }
