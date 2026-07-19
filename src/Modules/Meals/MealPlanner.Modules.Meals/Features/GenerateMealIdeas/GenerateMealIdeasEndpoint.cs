@@ -15,7 +15,7 @@ public sealed record GenerateMealIdeasRequest(
     MealStyle? Styles,
     int? MaxPrepTimeMinutes,
     IReadOnlyList<string>? IncludeIngredients,
-    int? Count);
+    int? Days);
 
 internal static class GenerateMealIdeasEndpoint
 {
@@ -38,7 +38,7 @@ internal static class GenerateMealIdeasEndpoint
             request.Styles,
             request.MaxPrepTimeMinutes,
             request.IncludeIngredients,
-            request.Count ?? 10);
+            request.Days ?? 7);
 
         var validation = await validator.ValidateAsync(query, cancellationToken);
         if (!validation.IsValid)

@@ -39,18 +39,31 @@ function App() {
         <p role="status">Aucune idée ne correspond à ces critères.</p>
       )}
 
-      <ul className="app__results">
+      <ol className="app__results">
         {ideas.map((idea) => (
           <li key={idea.id} className="app__card">
+            <p className="app__day">Jour {idea.day}</p>
             <h2>{idea.name}</h2>
+            {idea.styles.length > 0 && (
+              <ul className="app__styles" aria-label="Styles">
+                {idea.styles.map((style) => (
+                  <li key={style} className="app__style">
+                    {style}
+                  </li>
+                ))}
+              </ul>
+            )}
             <p>{idea.description}</p>
             <p className="app__meta">⏱ {idea.prepTimeMinutes} min</p>
             {idea.ingredients.length > 0 && (
               <p className="app__meta">🧺 {idea.ingredients.join(', ')}</p>
             )}
+            {idea.matchedIngredients.length > 0 && (
+              <p className="app__meta">✅ Utilise : {idea.matchedIngredients.join(', ')}</p>
+            )}
           </li>
         ))}
-      </ul>
+      </ol>
     </main>
   )
 }

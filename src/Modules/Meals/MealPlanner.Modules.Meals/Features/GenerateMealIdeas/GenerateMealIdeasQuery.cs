@@ -4,19 +4,26 @@ using MealPlanner.SharedKernel.Results;
 
 namespace MealPlanner.Modules.Meals.Features.GenerateMealIdeas;
 
-/// <summary>Génère des idées de repas selon des critères (saison, style, temps, ingrédients).</summary>
+/// <summary>
+/// Génère un planning de repas pour les prochains jours selon des critères (saison, style, temps),
+/// en priorisant les repas cuisinables avec les ingrédients disponibles.
+/// </summary>
 public sealed record GenerateMealIdeasQuery(
     Season? Season,
     MealStyle? Styles,
     int? MaxPrepTimeMinutes,
     IReadOnlyList<string>? IncludeIngredients,
-    int Count) : IQuery<Result<GenerateMealIdeasResponse>>;
+    int Days) : IQuery<Result<GenerateMealIdeasResponse>>;
 
-public sealed record GenerateMealIdeasResponse(IReadOnlyList<MealIdea> Ideas);
+public sealed record GenerateMealIdeasResponse(IReadOnlyList<PlannedMeal> Ideas);
 
-public sealed record MealIdea(
+/// <summary>Un repas positionné sur un jour du planning (jour 1 = aujourd'hui).</summary>
+public sealed record PlannedMeal(
+    int Day,
     Guid Id,
     string Name,
     string Description,
     int PrepTimeMinutes,
-    IReadOnlyList<string> Ingredients);
+    IReadOnlyList<MealStyle> Styles,
+    IReadOnlyList<string> Ingredients,
+    IReadOnlyList<string> MatchedIngredients);

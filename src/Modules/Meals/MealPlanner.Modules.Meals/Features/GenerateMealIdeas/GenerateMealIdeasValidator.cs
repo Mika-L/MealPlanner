@@ -6,9 +6,9 @@ internal sealed class GenerateMealIdeasValidator : AbstractValidator<GenerateMea
 {
     public GenerateMealIdeasValidator()
     {
-        RuleFor(query => query.Count)
-            .InclusiveBetween(1, 50)
-            .WithMessage("Le nombre d'idées doit être compris entre 1 et 50.");
+        RuleFor(query => query.Days)
+            .InclusiveBetween(1, 30)
+            .WithMessage("Le nombre de jours doit être compris entre 1 et 30.");
 
         RuleFor(query => query.MaxPrepTimeMinutes)
             .GreaterThan(0)

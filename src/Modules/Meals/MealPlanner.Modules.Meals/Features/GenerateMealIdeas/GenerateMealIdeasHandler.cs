@@ -1,4 +1,5 @@
-using System.Linq.Expressions;
+using System.Globalization;
+using System.Text;
 
 using MealPlanner.Modules.Meals.Domain;
 using MealPlanner.Modules.Meals.Infrastructure;
@@ -35,45 +36,127 @@ internal sealed class GenerateMealIdeasHandler(MealsDbContext dbContext)
             meals = meals.Where(meal => meal.PrepTimeMinutes <= maxPrepTime);
         }
 
+        // Les plus rapides d'abord : c'est aussi l'ordre de priorité de l'allocation par ingrédient.
+        var ordered = meals.OrderBy(meal => meal.PrepTimeMinutes);
+
+        List<PlanEntry> plan;
         if (query.IncludeIngredients is { Count: > 0 } includeIngredients)
         {
-            // Sous-requête sur les ingrédients + prédicat OR d'égalités (littéraux inlinés), puis
-            // `MealId IN (...)`. Évite un paramètre collection dans Contains, non supporté par le
-            // provider MySQL Oracle (InvalidOperationException "does not have a type mapping").
-            var matchingMealIds = dbContext.Ingredients
-                .Where(MatchesAnyName(includeIngredients))
-                .Select(ingredient => ingredient.MealId);
-
-            meals = meals.Where(meal => matchingMealIds.Contains(meal.Id));
+            // La correspondance souple et l'allocation « un ingrédient = un repas » ne s'expriment pas
+            // en SQL : on matérialise les candidats (catalogue restreint) puis on construit le planning.
+            var pool = await ordered.ToListAsync(cancellationToken);
+            plan = BuildPlan(pool, includeIngredients, query.Days);
+        }
+        else
+        {
+            var pool = await ordered.Take(query.Days).ToListAsync(cancellationToken);
+            plan = pool.Select(meal => new PlanEntry(meal, [])).ToList();
         }
 
-        var ideas = await meals
-            .OrderBy(meal => meal.PrepTimeMinutes)
-            .Take(query.Count)
-            .Select(meal => new MealIdea(
-                meal.Id,
-                meal.Name,
-                meal.Description,
-                meal.PrepTimeMinutes,
-                meal.Ingredients.Select(ingredient => ingredient.Name).ToList()))
-            .ToListAsync(cancellationToken);
+        var ideas = plan
+            .Select((entry, index) => new PlannedMeal(
+                index + 1,
+                entry.Meal.Id,
+                entry.Meal.Name,
+                entry.Meal.Description,
+                entry.Meal.PrepTimeMinutes,
+                DecomposeStyles(entry.Meal.Styles),
+                entry.Meal.Ingredients.Select(ingredient => ingredient.Name).ToList(),
+                entry.Matched))
+            .ToList();
 
         return Result.Success(new GenerateMealIdeasResponse(ideas));
     }
 
-    // Construit `ingredient => ingredient.Name == "a" || ingredient.Name == "b" || ...`
-    private static Expression<Func<MealIngredient, bool>> MatchesAnyName(IReadOnlyList<string> names)
-    {
-        var parameter = Expression.Parameter(typeof(MealIngredient), "ingredient");
-        var nameProperty = Expression.Property(parameter, nameof(MealIngredient.Name));
+    // Éclate le flags enum en styles individuels ("Healthy", "Comforting") pour un affichage direct.
+    private static List<MealStyle> DecomposeStyles(MealStyle styles) =>
+        Enum.GetValues<MealStyle>()
+            .Where(style => style != MealStyle.None && styles.HasFlag(style))
+            .ToList();
 
-        Expression body = Expression.Constant(false);
-        foreach (var name in names)
+    // Construit le planning en deux temps. D'abord les repas cuisinables avec les ingrédients
+    // disponibles (un même ingrédient ne sert qu'un seul repas — une tranche de jambon ne fait pas
+    // deux plats). Puis on complète les jours restants, mais uniquement avec des repas n'utilisant
+    // AUCUN ingrédient du frigo : on ne réintroduit jamais un repas écarté faute d'ingrédient dispo
+    // (pas de « salade au jambon » une fois le jambon consommé par une autre recette). Le pool arrive
+    // déjà trié par temps de préparation croissant, ce qui fixe l'ordre de priorité.
+    private static List<PlanEntry> BuildPlan(
+        IReadOnlyList<Meal> pool,
+        IReadOnlyList<string> availableIngredients,
+        int days)
+    {
+        var pantry = availableIngredients
+            .Select(term => (Original: term.Trim(), Normalized: Normalize(term)))
+            .Where(term => term.Normalized.Length > 0)
+            .DistinctBy(term => term.Normalized)
+            .ToList();
+
+        var candidates = pool
+            .Select(meal => new
+            {
+                Meal = meal,
+                Matched = pantry
+                    .Where(term => meal.Ingredients.Any(ingredient => Normalize(ingredient.Name).Contains(term.Normalized)))
+                    .ToList(),
+            })
+            .ToList();
+
+        var consumed = new HashSet<string>();
+        var plan = new List<PlanEntry>();
+
+        // 1. Priorité : repas s'appuyant sur des ingrédients disponibles encore non consommés.
+        foreach (var candidate in candidates)
         {
-            var equals = Expression.Equal(nameProperty, Expression.Constant(name));
-            body = Expression.OrElse(body, equals);
+            if (plan.Count == days)
+            {
+                break;
+            }
+
+            if (candidate.Matched.Count == 0 || candidate.Matched.Any(term => consumed.Contains(term.Normalized)))
+            {
+                continue;
+            }
+
+            plan.Add(new PlanEntry(candidate.Meal, candidate.Matched.Select(term => term.Original).ToList()));
+            foreach (var term in candidate.Matched)
+            {
+                consumed.Add(term.Normalized);
+            }
         }
 
-        return Expression.Lambda<Func<MealIngredient, bool>>(body, parameter);
+        // 2. Complément : on remplit les jours restants avec les repas neutres (aucun ingrédient du frigo).
+        foreach (var candidate in candidates)
+        {
+            if (plan.Count == days)
+            {
+                break;
+            }
+
+            if (candidate.Matched.Count == 0)
+            {
+                plan.Add(new PlanEntry(candidate.Meal, []));
+            }
+        }
+
+        return plan;
     }
+
+    // Minuscule + suppression des accents pour une comparaison tolérante ("gruyere" ~ "Gruyère râpé").
+    private static string Normalize(string value)
+    {
+        var decomposed = value.Trim().ToLowerInvariant().Normalize(NormalizationForm.FormD);
+        var builder = new StringBuilder(decomposed.Length);
+
+        foreach (var character in decomposed)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(character) != UnicodeCategory.NonSpacingMark)
+            {
+                builder.Append(character);
+            }
+        }
+
+        return builder.ToString().Normalize(NormalizationForm.FormC);
+    }
+
+    private sealed record PlanEntry(Meal Meal, IReadOnlyList<string> Matched);
 }
