@@ -15,8 +15,8 @@ export async function generateMealIdeas(
       season: criteria.season,
       styles: criteria.style,
       maxPrepTimeMinutes: criteria.maxPrepTimeMinutes,
-      includeIngredients: null,
-      count: 10,
+      includeIngredients: criteria.includeIngredients,
+      days: criteria.days,
     }),
     signal,
   })

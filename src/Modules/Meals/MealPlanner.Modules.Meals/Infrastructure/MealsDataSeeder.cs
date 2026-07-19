@@ -79,6 +79,21 @@ public static class MealsDataSeeder
             "Wrap poulet-crudités", "Déjeuner léger et express à emporter.",
             Season.Spring | Season.Summer, MealStyle.Quick | MealStyle.Light, 15,
             "tortilla", "poulet", "salade", "tomate", "yaourt");
+
+        yield return Create(
+            "Salade au jambon", "Salade complète et fraîche, prête en un instant.",
+            Season.AllYear, MealStyle.Light | MealStyle.Healthy | MealStyle.Quick, 15,
+            "salade", "jambon", "tomate", "œuf");
+
+        yield return Create(
+            "Croque-monsieur", "Le réconfort express jambon-fromage.",
+            Season.AllYear, MealStyle.Comforting | MealStyle.Quick, 20,
+            "pain de mie", "jambon", "gruyère", "beurre");
+
+        yield return Create(
+            "Quiche lorraine", "La tarte salée généreuse du répertoire classique.",
+            Season.AllYear, MealStyle.Comforting | MealStyle.Gourmet, 50,
+            "pâte brisée", "œuf", "lardons", "crème", "gruyère");
     }
 
     private static Meal Create(

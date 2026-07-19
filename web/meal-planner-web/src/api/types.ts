@@ -17,12 +17,17 @@ export interface MealCriteria {
   season: SeasonName | null
   style: MealStyleName | null
   maxPrepTimeMinutes: number | null
+  includeIngredients: string[]
+  days: number
 }
 
 export interface MealIdea {
+  day: number
   id: string
   name: string
   description: string
   prepTimeMinutes: number
+  styles: MealStyleName[]
   ingredients: string[]
+  matchedIngredients: string[]
 }
