@@ -31,3 +31,16 @@ export interface MealIdea {
   ingredients: string[]
   matchedIngredients: string[]
 }
+
+export interface Recipe {
+  id: string
+  name: string
+  description: string
+  seasons: SeasonName[]
+  styles: MealStyleName[]
+  prepTimeMinutes: number
+  ingredients: string[]
+}
+
+// Charge utile envoyée à l'API pour créer ou modifier une recette (sans identifiant).
+export type RecipeInput = Omit<Recipe, 'id'>

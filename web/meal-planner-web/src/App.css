@@ -10,6 +10,26 @@
   margin-bottom: 1.5rem;
 }
 
+.app__nav {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.app__nav a {
+  padding: 0.5rem 0.9rem;
+  text-decoration: none;
+  color: #555;
+  border-bottom: 2px solid transparent;
+  font-weight: 500;
+}
+
+.app__nav a.active {
+  color: #3730a3;
+  border-bottom-color: #3730a3;
+}
+
 .app form {
   display: flex;
   flex-wrap: wrap;
@@ -75,4 +95,86 @@
   padding: 0.1rem 0.6rem;
   font-size: 0.8rem;
   font-weight: 500;
+}
+
+.recipes__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.recipe-form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1rem;
+  max-width: 480px;
+}
+
+.recipe-form input[type='text'],
+.recipe-form input[type='number'],
+.recipe-form textarea {
+  padding: 0.5rem 0.75rem;
+  font-size: 1rem;
+  font-family: inherit;
+}
+
+.recipe-form__group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.recipe-form__check {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+}
+
+.recipe-form__ingredients {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.recipe-form__ingredients li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: #f3f4f6;
+  border-radius: 999px;
+  padding: 0.15rem 0.3rem 0.15rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+.recipe-form__actions,
+.recipe-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.recipe-card__actions {
+  margin-top: 0.75rem;
+}
+
+.recipe-card__delete,
+.recipe-card__actions button {
+  font-size: 0.9rem;
+}
+
+.recipe-card__confirm {
+  font-size: 0.9rem;
+  color: #c0392b;
 }

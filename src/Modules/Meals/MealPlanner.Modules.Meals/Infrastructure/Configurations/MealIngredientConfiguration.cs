@@ -13,6 +13,11 @@ internal sealed class MealIngredientConfiguration : IEntityTypeConfiguration<Mea
 
         builder.HasKey(ingredient => ingredient.Id);
 
+        // Clé assignée par le domaine (Guid v7) : EF ne doit pas la considérer « générée à l'ajout »,
+        // sinon un ingrédient recréé (clé déjà renseignée) est pris pour une entité existante → UPDATE
+        // fantôme au lieu d'un INSERT lors du remplacement de la collection.
+        builder.Property(ingredient => ingredient.Id).ValueGeneratedNever();
+
         builder.Property(ingredient => ingredient.Name).HasMaxLength(200).IsRequired();
 
         builder.HasIndex(ingredient => ingredient.Name);

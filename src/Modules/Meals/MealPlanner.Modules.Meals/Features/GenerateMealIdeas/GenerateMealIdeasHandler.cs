@@ -60,19 +60,13 @@ internal sealed class GenerateMealIdeasHandler(MealsDbContext dbContext)
                 entry.Meal.Name,
                 entry.Meal.Description,
                 entry.Meal.PrepTimeMinutes,
-                DecomposeStyles(entry.Meal.Styles),
+                FlagEnum.Decompose(entry.Meal.Styles),
                 entry.Meal.Ingredients.Select(ingredient => ingredient.Name).ToList(),
                 entry.Matched))
             .ToList();
 
         return Result.Success(new GenerateMealIdeasResponse(ideas));
     }
-
-    // Éclate le flags enum en styles individuels ("Healthy", "Comforting") pour un affichage direct.
-    private static List<MealStyle> DecomposeStyles(MealStyle styles) =>
-        Enum.GetValues<MealStyle>()
-            .Where(style => style != MealStyle.None && styles.HasFlag(style))
-            .ToList();
 
     // Construit le planning en deux temps. D'abord les repas cuisinables avec les ingrédients
     // disponibles (un même ingrédient ne sert qu'un seul repas — une tranche de jambon ne fait pas
