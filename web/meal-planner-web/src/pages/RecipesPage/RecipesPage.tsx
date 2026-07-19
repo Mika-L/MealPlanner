@@ -16,6 +16,7 @@ export function RecipesPage() {
   const [status, setStatus] = useState<'loading' | 'error' | 'idle'>('loading')
   const [mode, setMode] = useState<Mode>({ kind: 'list' })
   const [pendingDelete, setPendingDelete] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
 
   const refresh = () => {
     setStatus('loading')
@@ -46,6 +47,22 @@ export function RecipesPage() {
     setPendingDelete(null)
     refresh()
   }
+
+  const query = search.trim().toLowerCase()
+  const filteredRecipes = query
+    ? recipes.filter((recipe) =>
+        [
+          recipe.name,
+          recipe.description,
+          ...recipe.ingredients,
+          ...recipe.styles,
+          ...recipe.seasons,
+        ]
+          .join(' ')
+          .toLowerCase()
+          .includes(query),
+      )
+    : recipes
 
   if (mode.kind === 'create') {
     return (
@@ -84,6 +101,18 @@ export function RecipesPage() {
         </button>
       </div>
 
+      {status === 'idle' && recipes.length > 0 && (
+        <div className="recipes__search">
+          <input
+            type="text"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Rechercher une recette, un ingrédient, un style…"
+            aria-label="Rechercher une recette"
+          />
+        </div>
+      )}
+
       {status === 'loading' && <p role="status">Chargement…</p>}
       {status === 'error' && (
         <p role="alert" className="app__error">
@@ -95,8 +124,12 @@ export function RecipesPage() {
         <p role="status">Aucune recette pour l'instant. Ajoute la première !</p>
       )}
 
+      {status === 'idle' && recipes.length > 0 && filteredRecipes.length === 0 && (
+        <p role="status">Aucune recette ne correspond à « {search.trim()} ».</p>
+      )}
+
       <ul className="app__results">
-        {recipes.map((recipe) => (
+        {filteredRecipes.map((recipe) => (
           <li key={recipe.id} className="app__card">
             <h2>{recipe.name}</h2>
             {recipe.styles.length > 0 && (

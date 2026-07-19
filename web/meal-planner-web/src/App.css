@@ -327,6 +327,14 @@ button[type='submit']:hover,
   margin: 0;
 }
 
+.recipes__search {
+  margin-bottom: 1.5rem;
+}
+
+.recipes__search input[type='text'] {
+  width: 100%;
+}
+
 /* ---------- Formulaire recette ---------- */
 
 .recipe-form {
