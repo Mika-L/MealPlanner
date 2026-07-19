@@ -1,36 +1,41 @@
 :root {
-  /* Palette pétillante : corail → rose → mandarine */
-  --grad-warm: linear-gradient(135deg, #ff7a59 0%, #ff5470 48%, #ff77a9 100%);
-  --grad-warm-soft: linear-gradient(135deg, #ff8f6b 0%, #ff6a8a 100%);
+  /* Thème par défaut = Stone. Le thème actif est piloté par [data-palette]
+     sur <html> ; chaque palette ne redéfinit que ses tokens de couleur. */
 
-  --accent: #ff4d6d;
-  --accent-strong: #f43f5e;
-  --accent-ink: #b81d3f;
-  --accent-bg: rgba(255, 77, 109, 0.1);
-  --accent-border: rgba(255, 77, 109, 0.28);
-  --accent-2: #7c5cff;
+  /* Palette Stone : greige chaud (façade Plum Living Stone) + accent laiton */
+  --grad-warm: linear-gradient(135deg, #9a8d78 0%, #837962 48%, #6d6353 100%);
+  --grad-warm-soft: linear-gradient(135deg, #948977 0%, #7c7260 100%);
 
-  --text: #5c5566;
-  --text-soft: #8a8394;
-  --text-h: #1c1524;
+  --accent: #8c8273;
+  --accent-strong: #736a5c;
+  --accent-ink: #57503f;
+  --accent-bg: rgba(140, 130, 115, 0.12);
+  --accent-border: rgba(140, 130, 115, 0.3);
+  --accent-2: #b1936a;
+  /* Triplet RGB de la lueur d'accent (ombres colorées) */
+  --accent-glow: 120, 108, 88;
 
-  --bg: #fdf6f3;
-  --bg-tint-1: rgba(255, 138, 101, 0.16);
-  --bg-tint-2: rgba(255, 112, 166, 0.16);
-  --bg-tint-3: rgba(124, 92, 255, 0.12);
+  --text: #5f584e;
+  --text-soft: #948c80;
+  --text-h: #2e281f;
+
+  --bg: #f6f2ec;
+  --bg-tint-1: rgba(168, 156, 136, 0.18);
+  --bg-tint-2: rgba(177, 147, 106, 0.14);
+  --bg-tint-3: rgba(120, 112, 96, 0.12);
 
   --surface: rgba(255, 255, 255, 0.72);
   --surface-solid: #ffffff;
-  --border: rgba(28, 21, 36, 0.08);
-  --border-strong: rgba(28, 21, 36, 0.14);
+  --border: rgba(46, 40, 31, 0.08);
+  --border-strong: rgba(46, 40, 31, 0.14);
 
   --field-bg: rgba(255, 255, 255, 0.7);
 
-  --shadow-sm: 0 1px 2px rgba(28, 21, 36, 0.06);
+  --shadow-sm: 0 1px 2px rgba(46, 40, 31, 0.06);
   --shadow-md:
-    0 12px 30px -12px rgba(255, 84, 112, 0.28), 0 6px 14px -8px rgba(28, 21, 36, 0.12);
+    0 12px 30px -12px rgba(120, 108, 88, 0.3), 0 6px 14px -8px rgba(46, 40, 31, 0.12);
   --shadow-lg:
-    0 28px 60px -24px rgba(255, 84, 112, 0.4), 0 12px 24px -14px rgba(28, 21, 36, 0.16);
+    0 28px 60px -24px rgba(120, 108, 88, 0.42), 0 12px 24px -14px rgba(46, 40, 31, 0.16);
 
   --radius-lg: 24px;
   --radius-md: 16px;
@@ -53,8 +58,71 @@
   }
 }
 
+/* Palette Corail : la palette pétillante d'origine (corail → rose → mandarine) */
+:root[data-palette='coral'] {
+  --grad-warm: linear-gradient(135deg, #ff7a59 0%, #ff5470 48%, #ff77a9 100%);
+  --grad-warm-soft: linear-gradient(135deg, #ff8f6b 0%, #ff6a8a 100%);
+
+  --accent: #ff4d6d;
+  --accent-strong: #f43f5e;
+  --accent-ink: #b81d3f;
+  --accent-bg: rgba(255, 77, 109, 0.1);
+  --accent-border: rgba(255, 77, 109, 0.28);
+  --accent-2: #7c5cff;
+  --accent-glow: 255, 84, 112;
+
+  --text: #5c5566;
+  --text-soft: #8a8394;
+  --text-h: #1c1524;
+
+  --bg: #fdf6f3;
+  --bg-tint-1: rgba(255, 138, 101, 0.16);
+  --bg-tint-2: rgba(255, 112, 166, 0.16);
+  --bg-tint-3: rgba(124, 92, 255, 0.12);
+
+  --border: rgba(28, 21, 36, 0.08);
+  --border-strong: rgba(28, 21, 36, 0.14);
+
+  --shadow-sm: 0 1px 2px rgba(28, 21, 36, 0.06);
+  --shadow-md:
+    0 12px 30px -12px rgba(255, 84, 112, 0.28), 0 6px 14px -8px rgba(28, 21, 36, 0.12);
+  --shadow-lg:
+    0 28px 60px -24px rgba(255, 84, 112, 0.4), 0 12px 24px -14px rgba(28, 21, 36, 0.16);
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
+    --accent: #c8bda9;
+    --accent-strong: #d5cbb9;
+    --accent-ink: #e0d7c6;
+    --accent-bg: rgba(200, 189, 169, 0.16);
+    --accent-border: rgba(200, 189, 169, 0.38);
+    --accent-2: #cdac80;
+
+    --text: #b8b0a2;
+    --text-soft: #8b8479;
+    --text-h: #f4efe6;
+
+    --bg: #17140f;
+    --bg-tint-1: rgba(168, 156, 136, 0.14);
+    --bg-tint-2: rgba(177, 147, 106, 0.14);
+    --bg-tint-3: rgba(120, 112, 96, 0.16);
+
+    --surface: rgba(40, 36, 29, 0.66);
+    --surface-solid: #26221b;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.16);
+
+    --field-bg: rgba(255, 255, 255, 0.05);
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md:
+      0 14px 34px -14px rgba(0, 0, 0, 0.6), 0 6px 14px -8px rgba(0, 0, 0, 0.5);
+    --shadow-lg:
+      0 30px 64px -24px rgba(0, 0, 0, 0.7), 0 12px 24px -14px rgba(0, 0, 0, 0.55);
+  }
+
+  :root[data-palette='coral'] {
     --accent: #ff6b85;
     --accent-strong: #ff7a94;
     --accent-ink: #ffb3c1;
@@ -73,9 +141,9 @@
 
     --surface: rgba(35, 28, 45, 0.66);
     --surface-solid: #221b2c;
+    /* Redéfinis ici pour l'emporter sur le bloc Corail clair (même spécificité) */
     --border: rgba(255, 255, 255, 0.08);
     --border-strong: rgba(255, 255, 255, 0.16);
-
     --field-bg: rgba(255, 255, 255, 0.05);
 
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);

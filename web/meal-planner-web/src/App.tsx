@@ -1,6 +1,7 @@
 import { NavLink, Route, Routes } from 'react-router'
 
 import { IdeasPage } from './pages/IdeasPage/IdeasPage'
+import { PreferencesPage } from './pages/PreferencesPage/PreferencesPage'
 import { RecipesPage } from './pages/RecipesPage/RecipesPage'
 import './App.css'
 
@@ -21,6 +22,7 @@ function App() {
             Idées de repas
           </NavLink>
           <NavLink to="/recettes">Mes recettes</NavLink>
+          <NavLink to="/preferences">Préférences</NavLink>
         </nav>
       </header>
 
@@ -28,6 +30,7 @@ function App() {
         <Routes>
           <Route path="/" element={<IdeasPage />} />
           <Route path="/recettes" element={<RecipesPage />} />
+          <Route path="/preferences" element={<PreferencesPage />} />
         </Routes>
       </main>
     </div>
