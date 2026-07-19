@@ -1,4 +1,5 @@
 import type { MealCriteria, MealIdea } from './types'
+import { apiFetch } from './client'
 
 interface GenerateMealIdeasResponse {
   ideas: MealIdea[]
@@ -8,7 +9,7 @@ export async function generateMealIdeas(
   criteria: MealCriteria,
   signal?: AbortSignal,
 ): Promise<MealIdea[]> {
-  const response = await fetch('/api/meals/ideas', {
+  const response = await apiFetch('/api/meals/ideas', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
