@@ -14,9 +14,28 @@ internal sealed class ListMealsHandler(MealsDbContext dbContext)
         ListMealsQuery query,
         CancellationToken cancellationToken)
     {
-        var meals = await dbContext.Meals
+        var filtered = dbContext.Meals.AsQueryable();
+
+        var search = query.Search?.Trim();
+        if (!string.IsNullOrEmpty(search))
+        {
+            // Contains -> LIKE '%term%' ; la collation par défaut (utf8mb4_0900_ai_ci) rend la
+            // comparaison insensible à la casse et aux accents. Le filtre sur les ingrédients devient
+            // un EXISTS, ce qui évite de matérialiser le catalogue.
+            filtered = filtered.Where(meal =>
+                meal.Name.Contains(search)
+                || meal.Description.Contains(search)
+                || meal.Ingredients.Any(ingredient => ingredient.Name.Contains(search)));
+        }
+
+        // Total AVANT pagination : le client en a besoin pour savoir s'il reste des pages.
+        var total = await filtered.CountAsync(cancellationToken);
+
+        var meals = await filtered
             .Include(meal => meal.Ingredients)
             .OrderBy(meal => meal.Name)
+            .Skip((query.Page - 1) * query.PageSize)
+            .Take(query.PageSize)
             .ToListAsync(cancellationToken);
 
         var summaries = meals
@@ -30,6 +49,6 @@ internal sealed class ListMealsHandler(MealsDbContext dbContext)
                 meal.Ingredients.Select(ingredient => ingredient.Name).ToList()))
             .ToList();
 
-        return Result.Success(new ListMealsResponse(summaries));
+        return Result.Success(new ListMealsResponse(summaries, query.Page, query.PageSize, total));
     }
 }
