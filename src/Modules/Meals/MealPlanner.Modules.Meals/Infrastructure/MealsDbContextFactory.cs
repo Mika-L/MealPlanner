@@ -12,10 +12,10 @@ public sealed class MealsDbContextFactory : IDesignTimeDbContextFactory<MealsDbC
     public MealsDbContext CreateDbContext(string[] args)
     {
         var connectionString = Environment.GetEnvironmentVariable("MEALS_DB_CONNECTION")
-            ?? "server=localhost;port=3306;database=mealplanner;user=root;password=root";
+            ?? "Data Source=mealplanner.db";
 
         var options = new DbContextOptionsBuilder<MealsDbContext>()
-            .UseMySQL(connectionString)
+            .UseSqlite(connectionString)
             .Options;
 
         return new MealsDbContext(options);

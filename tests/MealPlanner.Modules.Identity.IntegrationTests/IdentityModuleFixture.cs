@@ -4,27 +4,32 @@ using MealPlanner.Modules.Meals;
 using MealPlanner.Modules.Meals.Infrastructure;
 using MealPlanner.SharedKernel.Identity;
 
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-using Testcontainers.MySql;
-
 namespace MealPlanner.Modules.Identity.IntegrationTests;
 
 /// <summary>
-/// Démarre un MySQL réel et compose le module Identity (+ Meals, pour le hook de clonage du catalogue)
-/// via l'injection de dépendances, comme le fait l'application. Recompose un schéma vierge à la demande.
+/// Compose le module Identity (+ Meals, pour le hook de clonage du catalogue) via l'injection de
+/// dépendances, comme le fait l'application, sur une base SQLite fichier. Recompose un schéma vierge
+/// à la demande.
 /// </summary>
 public sealed class IdentityModuleFixture : IAsyncLifetime
 {
-    private readonly MySqlContainer _container = new MySqlBuilder("mysql:8.4")
-        .WithDatabase("mealplanner")
-        .Build();
+    private readonly string _databasePath =
+        Path.Combine(Path.GetTempPath(), $"mealplanner-identity-tests-{Guid.NewGuid():N}.db");
 
-    public ValueTask InitializeAsync() => new(_container.StartAsync());
+    public ValueTask InitializeAsync() => ValueTask.CompletedTask;
 
-    public ValueTask DisposeAsync() => _container.DisposeAsync();
+    public ValueTask DisposeAsync()
+    {
+        // Libère les handles poolés pour pouvoir supprimer le fichier.
+        SqliteConnection.ClearAllPools();
+        File.Delete(_databasePath);
+        return ValueTask.CompletedTask;
+    }
 
     /// <summary>Construit un provider sur un schéma fraîchement migré. <paramref name="configure"/>
     /// s'applique après les modules et permet de substituer un service (ex. validateur Google).</summary>
@@ -32,7 +37,7 @@ public sealed class IdentityModuleFixture : IAsyncLifetime
         Action<IServiceCollection>? configure,
         CancellationToken cancellationToken)
     {
-        var connectionString = _container.GetConnectionString();
+        var connectionString = $"Data Source={_databasePath}";
 
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>

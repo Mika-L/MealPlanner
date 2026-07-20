@@ -489,3 +489,8 @@ $RECYCLE.BIN/
 # Node / front
 web/**/node_modules/
 web/**/dist/
+
+# SQLite (base runtime locale)
+*.db
+*.db-shm
+*.db-wal

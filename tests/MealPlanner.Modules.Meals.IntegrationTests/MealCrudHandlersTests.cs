@@ -10,8 +10,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace MealPlanner.Modules.Meals.IntegrationTests;
 
-[Collection(nameof(MySqlCollection))]
-public sealed class MealCrudHandlersTests(MySqlFixture fixture)
+[Collection(nameof(SqliteCollection))]
+public sealed class MealCrudHandlersTests(SqliteFixture fixture)
 {
     private static readonly Guid OwnerId = Guid.CreateVersion7();
     private readonly ICurrentUser _currentUser = new StubCurrentUser(OwnerId);
@@ -233,7 +233,7 @@ public sealed class MealCrudHandlersTests(MySqlFixture fixture)
     private async Task<MealsDbContext> CreateFreshDbContextAsync(CancellationToken cancellationToken)
     {
         var options = new DbContextOptionsBuilder<MealsDbContext>()
-            .UseMySQL(fixture.ConnectionString)
+            .UseSqlite(fixture.ConnectionString)
             .Options;
 
         var dbContext = new MealsDbContext(options);
