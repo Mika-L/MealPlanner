@@ -70,6 +70,20 @@ dotnet test tests/MealPlanner.Modules.Identity.IntegrationTests/MealPlanner.Modu
 cd web/meal-planner-web && npm test
 ```
 
+## Déploiement (production / Azure)
+
+Les migrations sont appliquées **au démarrage dans tous les environnements** (SQLite mono-instance) ;
+le dossier du fichier de base est créé automatiquement s'il manque. En dehors de `Development`, un
+échec d'initialisation fait **échouer le démarrage** (fail-fast) plutôt que de servir une app cassée.
+
+- **Base persistante** : `appsettings.Production.json` pointe par défaut vers `Data Source=/home/data/mealplanner.db`
+  (`/home` est le stockage persistant d'Azure App Service Linux). Surchargeable par variables d'environnement :
+  `ConnectionStrings__MealsDb` / `ConnectionStrings__IdentityDb` (les deux visent le même fichier).
+- **Secret JWT** : jamais commité. À fournir via variable d'environnement `Jwt__SigningKey` (≥ 32 octets)
+  ou les App Settings Azure. Idem `Authentication__Google__ClientId`, `Authentication__Facebook__*` si utilisés.
+- **Sauvegarde** : la base est un simple fichier — copie de `mealplanner.db` (idéalement à froid, ou via
+  réplication continue type Litestream vers un Blob Storage).
+
 ## Endpoint disponible
 
 `POST /api/meals/ideas`
