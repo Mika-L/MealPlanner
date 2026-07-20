@@ -208,6 +208,30 @@ public sealed class MealCrudHandlersTests(SqliteFixture fixture)
     }
 
     [Fact]
+    public async Task Should_match_search_term_ignoring_case_and_accents()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var dbContext = await CreateFreshDbContextAsync(cancellationToken);
+
+        var accented = new Meal(OwnerId, "Gâteau au café", "Moelleux", Season.AllYear, MealStyle.Comforting, 50);
+        var byIngredient = new Meal(OwnerId, "Quiche", "Salée", Season.AllYear, MealStyle.Comforting, 45);
+        byIngredient.AddIngredient("Crème fraîche");
+        dbContext.Meals.AddRange(accented, byIngredient);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // "GATEAU" (majuscules, sans accent) doit retrouver "Gâteau au café".
+        var byName = await new ListMealsHandler(dbContext, _currentUser)
+            .HandleAsync(new ListMealsQuery("GATEAU", Page: 1, PageSize: 24), cancellationToken);
+
+        // "creme" (minuscules, sans accent) doit retrouver la recette via son ingrédient "Crème fraîche".
+        var byIngredientSearch = await new ListMealsHandler(dbContext, _currentUser)
+            .HandleAsync(new ListMealsQuery("creme", Page: 1, PageSize: 24), cancellationToken);
+
+        byName.Value.Meals.Should().ContainSingle().Which.Name.Should().Be("Gâteau au café");
+        byIngredientSearch.Value.Meals.Should().ContainSingle().Which.Name.Should().Be("Quiche");
+    }
+
+    [Fact]
     public async Task Should_paginate_meals_and_report_the_full_total()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
