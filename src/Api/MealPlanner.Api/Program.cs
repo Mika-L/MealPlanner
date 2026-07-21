@@ -35,6 +35,11 @@ var app = builder.Build();
 
 app.UseSerilogRequestLogging();
 
+// SPA servi en same-origin : le front (Vite) est publié dans wwwroot et sert les fichiers statiques.
+// En dev, wwwroot est vide (le front tourne sur Vite via proxy) : ces middlewares sont alors inertes.
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -63,6 +68,9 @@ app.MapGet("/health", () => Results.Ok(new { status = "ok" })).WithTags("System"
 // Endpoints des modules
 app.MapIdentityModule();
 app.MapMealsModule();
+
+// Routes côté client (react-router) : tout ce qui n'est pas un endpoint/fichier retombe sur le SPA.
+app.MapFallbackToFile("index.html");
 
 app.Run();
 
