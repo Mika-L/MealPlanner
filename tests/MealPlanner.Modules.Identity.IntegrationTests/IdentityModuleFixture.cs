@@ -4,32 +4,40 @@ using MealPlanner.Modules.Meals;
 using MealPlanner.Modules.Meals.Infrastructure;
 using MealPlanner.SharedKernel.Identity;
 
-using Microsoft.Data.Sqlite;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+
+using Testcontainers.MsSql;
 
 namespace MealPlanner.Modules.Identity.IntegrationTests;
 
 /// <summary>
 /// Compose le module Identity (+ Meals, pour le hook de clonage du catalogue) via l'injection de
-/// dépendances, comme le fait l'application, sur une base SQLite fichier. Recompose un schéma vierge
-/// à la demande.
+/// dépendances, comme le fait l'application, sur un conteneur SQL Server éphémère partagé par la
+/// collection. Recompose un schéma vierge à la demande.
 /// </summary>
 public sealed class IdentityModuleFixture : IAsyncLifetime
 {
-    private readonly string _databasePath =
-        Path.Combine(Path.GetTempPath(), $"mealplanner-identity-tests-{Guid.NewGuid():N}.db");
+    private readonly MsSqlContainer _container = new MsSqlBuilder()
+        .WithImage("mcr.microsoft.com/mssql/server:2022-latest")
+        .Build();
 
-    public ValueTask InitializeAsync() => ValueTask.CompletedTask;
+    private string _connectionString = string.Empty;
 
-    public ValueTask DisposeAsync()
+    public async ValueTask InitializeAsync()
     {
-        // Libère les handles poolés pour pouvoir supprimer le fichier.
-        SqliteConnection.ClearAllPools();
-        File.Delete(_databasePath);
-        return ValueTask.CompletedTask;
+        await _container.StartAsync(TestContext.Current.CancellationToken);
+
+        // Le conteneur pointe master par défaut : on cible une base dédiée pour pouvoir la drop/recréer.
+        _connectionString = new SqlConnectionStringBuilder(_container.GetConnectionString())
+        {
+            InitialCatalog = "MealPlannerTests",
+        }.ConnectionString;
     }
+
+    public async ValueTask DisposeAsync() => await _container.DisposeAsync();
 
     /// <summary>Construit un provider sur un schéma fraîchement migré. <paramref name="configure"/>
     /// s'applique après les modules et permet de substituer un service (ex. validateur Google).</summary>
@@ -37,13 +45,11 @@ public sealed class IdentityModuleFixture : IAsyncLifetime
         Action<IServiceCollection>? configure,
         CancellationToken cancellationToken)
     {
-        var connectionString = $"Data Source={_databasePath}";
-
         var configuration = new ConfigurationBuilder()
             .AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:IdentityDb"] = connectionString,
-                ["ConnectionStrings:MealsDb"] = connectionString,
+                ["ConnectionStrings:IdentityDb"] = _connectionString,
+                ["ConnectionStrings:MealsDb"] = _connectionString,
                 ["Jwt:Issuer"] = "MealPlanner.Tests",
                 ["Jwt:Audience"] = "MealPlanner.Tests",
                 ["Jwt:SigningKey"] = "integration-tests-signing-key-at-least-32-bytes!!",

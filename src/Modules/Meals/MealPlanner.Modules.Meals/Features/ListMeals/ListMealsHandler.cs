@@ -19,38 +19,30 @@ internal sealed class ListMealsHandler(MealsDbContext dbContext, ICurrentUser cu
         var owned = dbContext.Meals
             .Where(meal => meal.OwnerId == currentUser.UserId)
             .Include(meal => meal.Ingredients)
-            .OrderBy(meal => meal.Name);
+            .AsQueryable();
 
         var search = query.Search?.Trim();
-
-        // Sans recherche : pagination côté SQL (total AVANT pagination pour connaître le nombre de pages).
-        if (string.IsNullOrEmpty(search))
+        if (!string.IsNullOrEmpty(search))
         {
-            var total = await owned.CountAsync(cancellationToken);
-            var page = await owned
-                .Skip((query.Page - 1) * query.PageSize)
-                .Take(query.PageSize)
-                .ToListAsync(cancellationToken);
-
-            return Result.Success(new ListMealsResponse(ToSummaries(page), query.Page, query.PageSize, total));
+            // Recherche entièrement côté SQL : les colonnes (nom, description, ingrédient) portent une
+            // collation insensible à la casse ET aux accents (voir MealsDbContext.SearchCollation), donc
+            // LIKE matche "gruyere" avec "Gruyère" sans matérialiser le catalogue en mémoire.
+            owned = owned.Where(meal =>
+                meal.Name.Contains(search)
+                || meal.Description.Contains(search)
+                || meal.Ingredients.Any(ingredient => ingredient.Name.Contains(search)));
         }
 
-        // Recherche insensible à la casse ET aux accents : SQLite ne sait pas normaliser les accents en
-        // SQL, on matérialise le (petit) catalogue de l'utilisateur puis on filtre/pagine en mémoire.
-        var normalizedSearch = SearchText.Normalize(search);
-        var matches = (await owned.ToListAsync(cancellationToken))
-            .Where(meal =>
-                SearchText.Normalize(meal.Name).Contains(normalizedSearch)
-                || SearchText.Normalize(meal.Description).Contains(normalizedSearch)
-                || meal.Ingredients.Any(ingredient => SearchText.Normalize(ingredient.Name).Contains(normalizedSearch)))
-            .ToList();
+        var ordered = owned.OrderBy(meal => meal.Name);
 
-        var matchesPage = matches
+        // Total AVANT pagination pour connaître le nombre de pages.
+        var total = await ordered.CountAsync(cancellationToken);
+        var page = await ordered
             .Skip((query.Page - 1) * query.PageSize)
             .Take(query.PageSize)
-            .ToList();
+            .ToListAsync(cancellationToken);
 
-        return Result.Success(new ListMealsResponse(ToSummaries(matchesPage), query.Page, query.PageSize, matches.Count));
+        return Result.Success(new ListMealsResponse(ToSummaries(page), query.Page, query.PageSize, total));
     }
 
     private static List<MealSummary> ToSummaries(IEnumerable<Meal> meals) =>

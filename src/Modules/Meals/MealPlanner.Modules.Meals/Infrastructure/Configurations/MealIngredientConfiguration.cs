@@ -18,7 +18,10 @@ internal sealed class MealIngredientConfiguration : IEntityTypeConfiguration<Mea
         // fantôme au lieu d'un INSERT lors du remplacement de la collection.
         builder.Property(ingredient => ingredient.Id).ValueGeneratedNever();
 
-        builder.Property(ingredient => ingredient.Name).HasMaxLength(200).IsRequired();
+        // Même collation insensible casse/accents que Meal : la recherche par ingrédient (LIKE) reste
+        // tolérante côté SQL.
+        builder.Property(ingredient => ingredient.Name).HasMaxLength(200).IsRequired()
+            .UseCollation(MealsDbContext.SearchCollation);
 
         builder.HasIndex(ingredient => ingredient.Name);
     }

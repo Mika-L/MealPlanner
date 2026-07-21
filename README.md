@@ -4,10 +4,10 @@ Générateur d'idées de repas selon des critères (saison, style *healthy/réco
 
 ## Stack
 
-- **Backend** : .NET 10 / C# 14, ASP.NET Core (Minimal API), EF Core 10, SQLite (provider `Microsoft.EntityFrameworkCore.Sqlite`, mode WAL), Serilog.
+- **Backend** : .NET 10 / C# 14, ASP.NET Core (Minimal API), EF Core 10, SQL Server / Azure SQL (provider `Microsoft.EntityFrameworkCore.SqlServer`), Serilog.
 - **Architecture** : monolithe modulaire + vertical slice léger + CQRS (dispatcher maison, sans MediatR).
-- **Front** : React 19 + TypeScript, Vite.
-- **Tests** : xUnit v3, FluentAssertions, NSubstitute, AutoFixture, SQLite (fichier temporaire, sans Docker), WebApplicationFactory, NetArchTest ; Vitest + Testing Library côté front.
+- **Front** : React 19 + TypeScript, Vite — servi en *same-origin* par l'API en production (`wwwroot`).
+- **Tests** : xUnit v3, FluentAssertions, NSubstitute, AutoFixture, SQL Server via Testcontainers, WebApplicationFactory, NetArchTest ; Vitest + Testing Library côté front.
 
 ## Structure
 
@@ -21,7 +21,7 @@ src/
     Features/GenerateMealIdeas/             #   1 slice = Query + Validator + Handler + Endpoint
 tests/
   *.UnitTests            # tests unitaires (xUnit v3 + FluentAssertions + NSubstitute + AutoFixture)
-  *.IntegrationTests     # SQLite sur fichier temporaire (aucun service externe)
+  *.IntegrationTests     # SQL Server éphémère via Testcontainers (Docker requis)
   *.FunctionalTests      # HTTP bout-en-bout via WebApplicationFactory
   ArchitectureTests      # règles d'architecture (NetArchTest)
 web/meal-planner-web/    # front React + Vite + Vitest
@@ -33,17 +33,20 @@ vivent dans le module, à côté de leur handler (vertical slice).
 ## Démarrer
 
 ```bash
-# 1. Lancer l'API (Scalar sur /scalar/v1 en Development)
-#    En Development, les migrations sont appliquées au démarrage ; SQLite crée le fichier
-#    mealplanner.db (+ .db-wal/.db-shm) dans le dossier de l'API à la première exécution.
-#    Le catalogue de démarrage est cloné pour chaque utilisateur à son inscription.
+# 1. Lancer SQL Server local (l'API cible localhost,1433 via appsettings.json)
+docker compose up -d
+
+# 2. Lancer l'API (Scalar sur /scalar/v1 en Development)
+#    En Development, les migrations sont appliquées au démarrage ; l'API crée la base « MealPlanner »
+#    à la première exécution. Le catalogue de démarrage est cloné pour chaque utilisateur à l'inscription.
 dotnet run --project src/Api/MealPlanner.Api
 
-# 2. Front
+# 3. Front
 cd web/meal-planner-web && npm install && npm run dev
 ```
 
-> Aucun service externe requis : SQLite est une base fichier embarquée.
+> **Docker requis** en local : SQL Server tourne dans un conteneur (`docker-compose.yml`).
+> Sur Apple Silicon, l'image `mssql/server` (amd64) est émulée automatiquement.
 >
 > Hors Development (ou pour appliquer les migrations à la main) — un contexte par module :
 > ```bash

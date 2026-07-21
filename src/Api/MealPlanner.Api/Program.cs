@@ -44,11 +44,8 @@ if (app.Environment.IsDevelopment())
     app.MapScalarApiReference();
 }
 
-// Migrations appliquées au démarrage (SQLite mono-instance), dans tous les environnements.
-// Le dossier du fichier est créé si besoin (ex. /home/data sur Azure App Service).
-SqliteStorage.EnsureDirectoryExists(app.Configuration.GetConnectionString(IdentityModule.ConnectionStringName));
-SqliteStorage.EnsureDirectoryExists(app.Configuration.GetConnectionString(MealsModule.ConnectionStringName));
-
+// Migrations appliquées au démarrage, dans tous les environnements. Hors dev, un échec fait échouer
+// le démarrage (fail-fast) plutôt que de servir une application connectée à une base non migrée.
 try
 {
     await app.Services.InitializeIdentityModuleAsync();

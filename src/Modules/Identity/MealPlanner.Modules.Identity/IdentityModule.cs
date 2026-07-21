@@ -32,7 +32,7 @@ public static class IdentityModule
         var connectionString = configuration.GetConnectionString(ConnectionStringName)
             ?? throw new InvalidOperationException($"Chaîne de connexion '{ConnectionStringName}' introuvable.");
 
-        services.AddDbContext<AppIdentityDbContext>(options => options.UseSqlite(connectionString));
+        services.AddDbContext<AppIdentityDbContext>(options => options.UseSqlServer(connectionString));
 
         services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
         services.Configure<GoogleAuthOptions>(configuration.GetSection(GoogleAuthOptions.SectionName));
@@ -89,9 +89,6 @@ public static class IdentityModule
         var dbContext = scope.ServiceProvider.GetRequiredService<AppIdentityDbContext>();
 
         await dbContext.Database.MigrateAsync(cancellationToken);
-
-        // WAL : meilleures lectures concurrentes pendant une écriture. Réglage persistant sur le fichier.
-        await dbContext.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;", cancellationToken);
     }
 
     private static void AddJwtAuthentication(IServiceCollection services, IConfiguration configuration)

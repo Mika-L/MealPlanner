@@ -2,7 +2,8 @@ using System.Net;
 
 namespace MealPlanner.Api.FunctionalTests;
 
-public sealed class AuthorizationTests(MealPlannerApiFactory factory) : IClassFixture<MealPlannerApiFactory>
+[Collection(nameof(MealPlannerApiCollection))]
+public sealed class AuthorizationTests(MealPlannerApiFactory factory)
 {
     [Fact]
     public async Task Meals_endpoint_should_reject_unauthenticated_requests()
