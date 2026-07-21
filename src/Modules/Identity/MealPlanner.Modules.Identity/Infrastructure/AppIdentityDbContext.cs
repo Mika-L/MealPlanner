@@ -8,7 +8,7 @@ namespace MealPlanner.Modules.Identity.Infrastructure;
 
 /// <summary>
 /// Contexte EF Core du module Identity. Tables préfixées <c>Identity_</c> (isolation des modules par
-/// préfixe de table, un seul fichier SQLite partagé).
+/// préfixe de table, une seule base partagée avec le module Meals).
 /// </summary>
 public sealed class AppIdentityDbContext(DbContextOptions<AppIdentityDbContext> options)
     : IdentityDbContext<AppUser, IdentityRole<Guid>, Guid>(options)

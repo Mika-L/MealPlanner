@@ -2,7 +2,8 @@ using System.Net;
 
 namespace MealPlanner.Api.FunctionalTests;
 
-public sealed class HealthEndpointTests(MealPlannerApiFactory factory) : IClassFixture<MealPlannerApiFactory>
+[Collection(nameof(MealPlannerApiCollection))]
+public sealed class HealthEndpointTests(MealPlannerApiFactory factory)
 {
     [Fact]
     public async Task Health_endpoint_should_return_ok()

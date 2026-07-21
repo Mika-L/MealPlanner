@@ -12,10 +12,10 @@ public sealed class AppIdentityDbContextFactory : IDesignTimeDbContextFactory<Ap
     public AppIdentityDbContext CreateDbContext(string[] args)
     {
         var connectionString = Environment.GetEnvironmentVariable("IDENTITY_DB_CONNECTION")
-            ?? "Data Source=mealplanner.db";
+            ?? "Server=localhost,1433;Database=MealPlanner;User Id=sa;Password=LocalDev_p4ssw0rd;TrustServerCertificate=True";
 
         var options = new DbContextOptionsBuilder<AppIdentityDbContext>()
-            .UseSqlite(connectionString)
+            .UseSqlServer(connectionString)
             .Options;
 
         return new AppIdentityDbContext(options);

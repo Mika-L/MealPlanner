@@ -15,13 +15,13 @@ namespace MealPlanner.Modules.Meals.Infrastructure.Migrations
                 name: "Meals_Meals",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    OwnerId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false),
-                    Description = table.Column<string>(type: "TEXT", maxLength: 2000, nullable: false),
-                    Seasons = table.Column<int>(type: "INTEGER", nullable: false),
-                    Styles = table.Column<int>(type: "INTEGER", nullable: false),
-                    PrepTimeMinutes = table.Column<int>(type: "INTEGER", nullable: false)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false, collation: "Latin1_General_CI_AI"),
+                    Description = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false, collation: "Latin1_General_CI_AI"),
+                    Seasons = table.Column<int>(type: "int", nullable: false),
+                    Styles = table.Column<int>(type: "int", nullable: false),
+                    PrepTimeMinutes = table.Column<int>(type: "int", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -32,9 +32,9 @@ namespace MealPlanner.Modules.Meals.Infrastructure.Migrations
                 name: "Meals_Ingredients",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    MealId = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", maxLength: 200, nullable: false)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    MealId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false, collation: "Latin1_General_CI_AI")
                 },
                 constraints: table =>
                 {
