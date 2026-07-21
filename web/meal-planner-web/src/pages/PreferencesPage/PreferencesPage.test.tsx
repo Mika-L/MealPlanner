@@ -2,14 +2,18 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it } from 'vitest'
 
+import { AuthProvider } from '../../auth'
 import { ThemeProvider } from '../../theme'
 import { PreferencesPage } from './PreferencesPage'
 
+// Anonyme (aucune session en localStorage) : le thème reste purement local, pas de sync serveur.
 function renderPage() {
   return render(
-    <ThemeProvider>
-      <PreferencesPage />
-    </ThemeProvider>,
+    <AuthProvider>
+      <ThemeProvider>
+        <PreferencesPage />
+      </ThemeProvider>
+    </AuthProvider>,
   )
 }
 

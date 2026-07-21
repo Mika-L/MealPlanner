@@ -16,8 +16,13 @@ internal sealed class MealConfiguration : IEntityTypeConfiguration<Meal>
         // Clé assignée par le domaine (Guid v7), voir MealIngredientConfiguration.
         builder.Property(meal => meal.Id).ValueGeneratedNever();
 
-        builder.Property(meal => meal.Name).HasMaxLength(200).IsRequired();
-        builder.Property(meal => meal.Description).HasMaxLength(2000).IsRequired();
+        builder.Property(meal => meal.OwnerId).IsRequired();
+        builder.HasIndex(meal => meal.OwnerId);
+
+        // Collation insensible à la casse ET aux accents : la recherche (LIKE) matche "gruyere"
+        // avec "Gruyère" directement en SQL, sans normalisation applicative.
+        builder.Property(meal => meal.Name).HasMaxLength(200).IsRequired().UseCollation(MealsDbContext.SearchCollation);
+        builder.Property(meal => meal.Description).HasMaxLength(2000).IsRequired().UseCollation(MealsDbContext.SearchCollation);
         builder.Property(meal => meal.Seasons).HasConversion<int>();
         builder.Property(meal => meal.Styles).HasConversion<int>();
         builder.Property(meal => meal.PrepTimeMinutes);

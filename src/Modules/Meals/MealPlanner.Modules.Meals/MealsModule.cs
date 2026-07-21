@@ -7,6 +7,7 @@ using MealPlanner.Modules.Meals.Features.ListMeals;
 using MealPlanner.Modules.Meals.Features.UpdateMeal;
 using MealPlanner.Modules.Meals.Infrastructure;
 using MealPlanner.SharedKernel.Cqrs;
+using MealPlanner.SharedKernel.Integration;
 
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
@@ -25,11 +26,14 @@ public static class MealsModule
         var connectionString = configuration.GetConnectionString(ConnectionStringName)
             ?? throw new InvalidOperationException($"Chaîne de connexion '{ConnectionStringName}' introuvable.");
 
-        services.AddDbContext<MealsDbContext>(options => options.UseMySQL(connectionString));
+        services.AddDbContext<MealsDbContext>(options => options.UseSqlServer(connectionString));
 
         services.AddDispatcher();
         services.AddCqrsHandlersFromAssembly(typeof(MealsModule).Assembly);
         services.AddValidatorsFromAssemblyContaining<GenerateMealIdeasValidator>(includeInternalTypes: true);
+
+        // À l'inscription d'un utilisateur, on lui clone le catalogue de démarrage.
+        services.AddScoped<IUserRegisteredListener, UserCatalogSeeder>();
 
         return services;
     }
@@ -44,13 +48,13 @@ public static class MealsModule
         return endpoints;
     }
 
-    /// <summary>Applique les migrations puis alimente le catalogue (idempotent). À appeler au démarrage.</summary>
+    /// <summary>Applique les migrations du module. À appeler au démarrage. Le catalogue est cloné par
+    /// utilisateur à l'inscription (voir <see cref="UserCatalogSeeder"/>), plus de seed global.</summary>
     public static async Task InitializeMealsModuleAsync(this IServiceProvider services, CancellationToken cancellationToken = default)
     {
         await using var scope = services.CreateAsyncScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<MealsDbContext>();
 
         await dbContext.Database.MigrateAsync(cancellationToken);
-        await MealsDataSeeder.SeedAsync(dbContext, cancellationToken);
     }
 }

@@ -11,16 +11,14 @@ namespace MealPlanner.Modules.Meals.Infrastructure.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AlterDatabase()
-                .Annotation("MySQL:Charset", "utf8mb4");
-
             migrationBuilder.CreateTable(
                 name: "Meals_Meals",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "char(36)", nullable: false),
-                    Name = table.Column<string>(type: "varchar(200)", maxLength: 200, nullable: false),
-                    Description = table.Column<string>(type: "varchar(2000)", maxLength: 2000, nullable: false),
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    OwnerId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false, collation: "Latin1_General_CI_AI"),
+                    Description = table.Column<string>(type: "nvarchar(2000)", maxLength: 2000, nullable: false, collation: "Latin1_General_CI_AI"),
                     Seasons = table.Column<int>(type: "int", nullable: false),
                     Styles = table.Column<int>(type: "int", nullable: false),
                     PrepTimeMinutes = table.Column<int>(type: "int", nullable: false)
@@ -28,16 +26,15 @@ namespace MealPlanner.Modules.Meals.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Meals_Meals", x => x.Id);
-                })
-                .Annotation("MySQL:Charset", "utf8mb4");
+                });
 
             migrationBuilder.CreateTable(
                 name: "Meals_Ingredients",
                 columns: table => new
                 {
-                    Id = table.Column<Guid>(type: "char(36)", nullable: false),
-                    MealId = table.Column<Guid>(type: "char(36)", nullable: false),
-                    Name = table.Column<string>(type: "varchar(200)", maxLength: 200, nullable: false)
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    MealId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false, collation: "Latin1_General_CI_AI")
                 },
                 constraints: table =>
                 {
@@ -48,8 +45,7 @@ namespace MealPlanner.Modules.Meals.Infrastructure.Migrations
                         principalTable: "Meals_Meals",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Cascade);
-                })
-                .Annotation("MySQL:Charset", "utf8mb4");
+                });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Meals_Ingredients_MealId",
@@ -60,6 +56,11 @@ namespace MealPlanner.Modules.Meals.Infrastructure.Migrations
                 name: "IX_Meals_Ingredients_Name",
                 table: "Meals_Ingredients",
                 column: "Name");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Meals_Meals_OwnerId",
+                table: "Meals_Meals",
+                column: "OwnerId");
         }
 
         /// <inheritdoc />

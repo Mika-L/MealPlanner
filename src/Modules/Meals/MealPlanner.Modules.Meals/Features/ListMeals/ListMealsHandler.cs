@@ -1,44 +1,52 @@
 using MealPlanner.Modules.Meals.Domain;
 using MealPlanner.Modules.Meals.Infrastructure;
 using MealPlanner.SharedKernel.Cqrs;
+using MealPlanner.SharedKernel.Identity;
 using MealPlanner.SharedKernel.Results;
 
 using Microsoft.EntityFrameworkCore;
 
 namespace MealPlanner.Modules.Meals.Features.ListMeals;
 
-internal sealed class ListMealsHandler(MealsDbContext dbContext)
+internal sealed class ListMealsHandler(MealsDbContext dbContext, ICurrentUser currentUser)
     : IQueryHandler<ListMealsQuery, Result<ListMealsResponse>>
 {
     public async Task<Result<ListMealsResponse>> HandleAsync(
         ListMealsQuery query,
         CancellationToken cancellationToken)
     {
-        var filtered = dbContext.Meals.AsQueryable();
+        // Chaque utilisateur ne voit que ses propres recettes.
+        var owned = dbContext.Meals
+            .Where(meal => meal.OwnerId == currentUser.UserId)
+            .Include(meal => meal.Ingredients)
+            .AsQueryable();
 
         var search = query.Search?.Trim();
         if (!string.IsNullOrEmpty(search))
         {
-            // Contains -> LIKE '%term%' ; la collation par défaut (utf8mb4_0900_ai_ci) rend la
-            // comparaison insensible à la casse et aux accents. Le filtre sur les ingrédients devient
-            // un EXISTS, ce qui évite de matérialiser le catalogue.
-            filtered = filtered.Where(meal =>
+            // Recherche entièrement côté SQL : les colonnes (nom, description, ingrédient) portent une
+            // collation insensible à la casse ET aux accents (voir MealsDbContext.SearchCollation), donc
+            // LIKE matche "gruyere" avec "Gruyère" sans matérialiser le catalogue en mémoire.
+            owned = owned.Where(meal =>
                 meal.Name.Contains(search)
                 || meal.Description.Contains(search)
                 || meal.Ingredients.Any(ingredient => ingredient.Name.Contains(search)));
         }
 
-        // Total AVANT pagination : le client en a besoin pour savoir s'il reste des pages.
-        var total = await filtered.CountAsync(cancellationToken);
+        var ordered = owned.OrderBy(meal => meal.Name);
 
-        var meals = await filtered
-            .Include(meal => meal.Ingredients)
-            .OrderBy(meal => meal.Name)
+        // Total AVANT pagination pour connaître le nombre de pages.
+        var total = await ordered.CountAsync(cancellationToken);
+        var page = await ordered
             .Skip((query.Page - 1) * query.PageSize)
             .Take(query.PageSize)
             .ToListAsync(cancellationToken);
 
-        var summaries = meals
+        return Result.Success(new ListMealsResponse(ToSummaries(page), query.Page, query.PageSize, total));
+    }
+
+    private static List<MealSummary> ToSummaries(IEnumerable<Meal> meals) =>
+        meals
             .Select(meal => new MealSummary(
                 meal.Id,
                 meal.Name,
@@ -48,7 +56,4 @@ internal sealed class ListMealsHandler(MealsDbContext dbContext)
                 meal.PrepTimeMinutes,
                 meal.Ingredients.Select(ingredient => ingredient.Name).ToList()))
             .ToList();
-
-        return Result.Success(new ListMealsResponse(summaries, query.Page, query.PageSize, total));
-    }
 }

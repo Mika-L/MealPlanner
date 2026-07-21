@@ -1,16 +1,34 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
+
+using Testcontainers.MsSql;
 
 namespace MealPlanner.Api.FunctionalTests;
 
 /// <summary>
-/// Fabrique de test in-memory. Fournit une chaîne de connexion factice pour que
-/// la composition démarre ; EF n'ouvre aucune connexion tant qu'aucune requête DB n'est faite.
-/// Pour des tests bout-en-bout avec DB, brancher un <c>MySqlContainer</c> (Testcontainers).
+/// Fabrique de test in-memory. L'API démarre en Development et migre au démarrage : on la pointe vers
+/// un conteneur SQL Server éphémère, partagé par la collection (une seule instance émulée). Le conteneur
+/// est démarré avant la construction de l'hôte (IAsyncLifetime).
 /// </summary>
-public sealed class MealPlannerApiFactory : WebApplicationFactory<Program>
+public sealed class MealPlannerApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
+    private readonly MsSqlContainer _container = new MsSqlBuilder()
+        .WithImage("mcr.microsoft.com/mssql/server:2022-latest")
+        .Build();
+
+    private string _connectionString = string.Empty;
+
+    async ValueTask IAsyncLifetime.InitializeAsync()
+    {
+        await _container.StartAsync();
+        _connectionString = new SqlConnectionStringBuilder(_container.GetConnectionString())
+        {
+            InitialCatalog = "MealPlannerFunctionalTests",
+        }.ConnectionString;
+    }
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
@@ -18,8 +36,21 @@ public sealed class MealPlannerApiFactory : WebApplicationFactory<Program>
         {
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["ConnectionStrings:MealsDb"] = "server=localhost;port=3306;database=test;user=root;password=root",
+                ["ConnectionStrings:MealsDb"] = _connectionString,
+                ["ConnectionStrings:IdentityDb"] = _connectionString,
+                ["Jwt:Issuer"] = "MealPlanner.Tests",
+                ["Jwt:Audience"] = "MealPlanner.Tests",
+                ["Jwt:SigningKey"] = "functional-tests-signing-key-at-least-32-bytes-long!!",
             });
         });
     }
+
+    public override async ValueTask DisposeAsync()
+    {
+        await base.DisposeAsync();
+        await _container.DisposeAsync();
+    }
 }
+
+[CollectionDefinition(nameof(MealPlannerApiCollection))]
+public sealed class MealPlannerApiCollection : ICollectionFixture<MealPlannerApiFactory>;

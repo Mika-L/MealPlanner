@@ -3,6 +3,7 @@ using System;
 using MealPlanner.Modules.Meals.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
@@ -11,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MealPlanner.Modules.Meals.Infrastructure.Migrations
 {
     [DbContext(typeof(MealsDbContext))]
-    [Migration("20260719114555_InitialCreate")]
+    [Migration("20260721185633_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -20,23 +21,29 @@ namespace MealPlanner.Modules.Meals.Infrastructure.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("ProductVersion", "10.0.10")
-                .HasAnnotation("Relational:MaxIdentifierLength", 64);
+                .HasAnnotation("Relational:MaxIdentifierLength", 128);
+
+            SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
             modelBuilder.Entity("MealPlanner.Modules.Meals.Domain.Meal", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(2000)
-                        .HasColumnType("varchar(2000)");
+                        .HasColumnType("nvarchar(2000)")
+                        .UseCollation("Latin1_General_CI_AI");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
+                        .HasColumnType("nvarchar(200)")
+                        .UseCollation("Latin1_General_CI_AI");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("PrepTimeMinutes")
                         .HasColumnType("int");
@@ -49,22 +56,24 @@ namespace MealPlanner.Modules.Meals.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("OwnerId");
+
                     b.ToTable("Meals_Meals", (string)null);
                 });
 
             modelBuilder.Entity("MealPlanner.Modules.Meals.Domain.MealIngredient", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<Guid>("MealId")
-                        .HasColumnType("char(36)");
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
-                        .HasColumnType("varchar(200)");
+                        .HasColumnType("nvarchar(200)")
+                        .UseCollation("Latin1_General_CI_AI");
 
                     b.HasKey("Id");
 

@@ -4,14 +4,18 @@ using MealPlanner.Modules.Meals.Features.DeleteMeal;
 using MealPlanner.Modules.Meals.Features.ListMeals;
 using MealPlanner.Modules.Meals.Features.UpdateMeal;
 using MealPlanner.Modules.Meals.Infrastructure;
+using MealPlanner.SharedKernel.Identity;
 
 using Microsoft.EntityFrameworkCore;
 
 namespace MealPlanner.Modules.Meals.IntegrationTests;
 
-[Collection(nameof(MySqlCollection))]
-public sealed class MealCrudHandlersTests(MySqlFixture fixture)
+[Collection(nameof(MsSqlCollection))]
+public sealed class MealCrudHandlersTests(MsSqlFixture fixture)
 {
+    private static readonly Guid OwnerId = Guid.CreateVersion7();
+    private readonly ICurrentUser _currentUser = new StubCurrentUser(OwnerId);
+
     [Fact]
     public async Task Should_create_a_meal_with_its_ingredients()
     {
@@ -26,7 +30,7 @@ public sealed class MealCrudHandlersTests(MySqlFixture fixture)
             60,
             ["courgette", "aubergine"]);
 
-        var result = await new CreateMealHandler(dbContext).HandleAsync(command, cancellationToken);
+        var result = await new CreateMealHandler(dbContext, _currentUser).HandleAsync(command, cancellationToken);
 
         result.IsSuccess.Should().BeTrue();
 
@@ -34,6 +38,7 @@ public sealed class MealCrudHandlersTests(MySqlFixture fixture)
             .Include(meal => meal.Ingredients)
             .SingleAsync(meal => meal.Id == result.Value, cancellationToken);
         stored.Name.Should().Be("Ratatouille");
+        stored.OwnerId.Should().Be(OwnerId);
         stored.Seasons.Should().Be(Season.Summer | Season.Autumn);
         stored.Styles.Should().Be(MealStyle.Healthy | MealStyle.Comforting);
         stored.Ingredients.Select(ingredient => ingredient.Name)
@@ -46,7 +51,7 @@ public sealed class MealCrudHandlersTests(MySqlFixture fixture)
         var cancellationToken = TestContext.Current.CancellationToken;
         await using var dbContext = await CreateFreshDbContextAsync(cancellationToken);
 
-        var meal = new Meal("Ancien nom", "Ancienne description", Season.Winter, MealStyle.Comforting, 90);
+        var meal = new Meal(OwnerId, "Ancien nom", "Ancienne description", Season.Winter, MealStyle.Comforting, 90);
         meal.AddIngredient("bœuf");
         dbContext.Meals.Add(meal);
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -60,7 +65,7 @@ public sealed class MealCrudHandlersTests(MySqlFixture fixture)
             20,
             ["salade", "tomate"]);
 
-        var result = await new UpdateMealHandler(dbContext).HandleAsync(command, cancellationToken);
+        var result = await new UpdateMealHandler(dbContext, _currentUser).HandleAsync(command, cancellationToken);
 
         result.IsSuccess.Should().BeTrue();
 
@@ -83,7 +88,27 @@ public sealed class MealCrudHandlersTests(MySqlFixture fixture)
         var command = new UpdateMealCommand(
             Guid.CreateVersion7(), "Nom", "Description", [Season.Summer], [MealStyle.Quick], 15, []);
 
-        var result = await new UpdateMealHandler(dbContext).HandleAsync(command, cancellationToken);
+        var result = await new UpdateMealHandler(dbContext, _currentUser).HandleAsync(command, cancellationToken);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(SharedKernel.Results.ErrorType.NotFound);
+    }
+
+    [Fact]
+    public async Task Should_not_update_a_meal_owned_by_another_user()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var dbContext = await CreateFreshDbContextAsync(cancellationToken);
+
+        // Recette appartenant à un autre utilisateur.
+        var foreignMeal = new Meal(Guid.CreateVersion7(), "Privée", "", Season.AllYear, MealStyle.Quick, 10);
+        dbContext.Meals.Add(foreignMeal);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var command = new UpdateMealCommand(
+            foreignMeal.Id, "Détournée", "", [Season.Summer], [MealStyle.Quick], 15, []);
+
+        var result = await new UpdateMealHandler(dbContext, _currentUser).HandleAsync(command, cancellationToken);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Type.Should().Be(SharedKernel.Results.ErrorType.NotFound);
@@ -95,11 +120,11 @@ public sealed class MealCrudHandlersTests(MySqlFixture fixture)
         var cancellationToken = TestContext.Current.CancellationToken;
         await using var dbContext = await CreateFreshDbContextAsync(cancellationToken);
 
-        var meal = new Meal("À supprimer", "", Season.AllYear, MealStyle.Quick, 10);
+        var meal = new Meal(OwnerId, "À supprimer", "", Season.AllYear, MealStyle.Quick, 10);
         dbContext.Meals.Add(meal);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var result = await new DeleteMealHandler(dbContext).HandleAsync(
+        var result = await new DeleteMealHandler(dbContext, _currentUser).HandleAsync(
             new DeleteMealCommand(meal.Id), cancellationToken);
 
         result.IsSuccess.Should().BeTrue();
@@ -113,7 +138,7 @@ public sealed class MealCrudHandlersTests(MySqlFixture fixture)
         var cancellationToken = TestContext.Current.CancellationToken;
         await using var dbContext = await CreateFreshDbContextAsync(cancellationToken);
 
-        var result = await new DeleteMealHandler(dbContext).HandleAsync(
+        var result = await new DeleteMealHandler(dbContext, _currentUser).HandleAsync(
             new DeleteMealCommand(Guid.CreateVersion7()), cancellationToken);
 
         result.IsFailure.Should().BeTrue();
@@ -127,11 +152,11 @@ public sealed class MealCrudHandlersTests(MySqlFixture fixture)
         await using var dbContext = await CreateFreshDbContextAsync(cancellationToken);
 
         dbContext.Meals.AddRange(
-            new Meal("Zurek", "Soupe polonaise", Season.Winter, MealStyle.Comforting, 90),
-            new Meal("Avocado toast", "Rapide", Season.AllYear, MealStyle.Quick, 5));
+            new Meal(OwnerId, "Zurek", "Soupe polonaise", Season.Winter, MealStyle.Comforting, 90),
+            new Meal(OwnerId, "Avocado toast", "Rapide", Season.AllYear, MealStyle.Quick, 5));
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var result = await new ListMealsHandler(dbContext)
+        var result = await new ListMealsHandler(dbContext, _currentUser)
             .HandleAsync(new ListMealsQuery(null, Page: 1, PageSize: 24), cancellationToken);
 
         result.IsSuccess.Should().BeTrue();
@@ -143,24 +168,67 @@ public sealed class MealCrudHandlersTests(MySqlFixture fixture)
     }
 
     [Fact]
+    public async Task Should_only_list_meals_owned_by_the_current_user()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var dbContext = await CreateFreshDbContextAsync(cancellationToken);
+
+        dbContext.Meals.AddRange(
+            new Meal(OwnerId, "La mienne", "", Season.AllYear, MealStyle.Quick, 10),
+            new Meal(Guid.CreateVersion7(), "Celle d'un autre", "", Season.AllYear, MealStyle.Quick, 10));
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var result = await new ListMealsHandler(dbContext, _currentUser)
+            .HandleAsync(new ListMealsQuery(null, Page: 1, PageSize: 24), cancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Total.Should().Be(1);
+        result.Value.Meals.Should().ContainSingle().Which.Name.Should().Be("La mienne");
+    }
+
+    [Fact]
     public async Task Should_filter_meals_by_search_term_on_name_description_or_ingredient()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
         await using var dbContext = await CreateFreshDbContextAsync(cancellationToken);
 
-        var byName = new Meal("Tarte à la tomate", "Estivale", Season.Summer, MealStyle.Light, 40);
-        var byIngredient = new Meal("Salade César", "Fraîche", Season.Summer, MealStyle.Light, 15);
+        var byName = new Meal(OwnerId, "Tarte à la tomate", "Estivale", Season.Summer, MealStyle.Light, 40);
+        var byIngredient = new Meal(OwnerId, "Salade César", "Fraîche", Season.Summer, MealStyle.Light, 15);
         byIngredient.AddIngredient("tomate cerise");
-        var unrelated = new Meal("Raclette", "Hivernale", Season.Winter, MealStyle.Comforting, 30);
+        var unrelated = new Meal(OwnerId, "Raclette", "Hivernale", Season.Winter, MealStyle.Comforting, 30);
         dbContext.Meals.AddRange(byName, byIngredient, unrelated);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var result = await new ListMealsHandler(dbContext)
+        var result = await new ListMealsHandler(dbContext, _currentUser)
             .HandleAsync(new ListMealsQuery("tomate", Page: 1, PageSize: 24), cancellationToken);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Total.Should().Be(2);
         result.Value.Meals.Select(meal => meal.Name).Should().BeEquivalentTo("Tarte à la tomate", "Salade César");
+    }
+
+    [Fact]
+    public async Task Should_match_search_term_ignoring_case_and_accents()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var dbContext = await CreateFreshDbContextAsync(cancellationToken);
+
+        var accented = new Meal(OwnerId, "Gâteau au café", "Moelleux", Season.AllYear, MealStyle.Comforting, 50);
+        var byIngredient = new Meal(OwnerId, "Quiche", "Salée", Season.AllYear, MealStyle.Comforting, 45);
+        byIngredient.AddIngredient("Crème fraîche");
+        dbContext.Meals.AddRange(accented, byIngredient);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        // "GATEAU" (majuscules, sans accent) doit retrouver "Gâteau au café".
+        var byName = await new ListMealsHandler(dbContext, _currentUser)
+            .HandleAsync(new ListMealsQuery("GATEAU", Page: 1, PageSize: 24), cancellationToken);
+
+        // "creme" (minuscules, sans accent) doit retrouver la recette via son ingrédient "Crème fraîche".
+        var byIngredientSearch = await new ListMealsHandler(dbContext, _currentUser)
+            .HandleAsync(new ListMealsQuery("creme", Page: 1, PageSize: 24), cancellationToken);
+
+        byName.Value.Meals.Should().ContainSingle().Which.Name.Should().Be("Gâteau au café");
+        byIngredientSearch.Value.Meals.Should().ContainSingle().Which.Name.Should().Be("Quiche");
     }
 
     [Fact]
@@ -172,12 +240,12 @@ public sealed class MealCrudHandlersTests(MySqlFixture fixture)
         // Noms préfixés d'un indice pour un ordre alphabétique déterministe.
         for (var index = 0; index < 5; index++)
         {
-            dbContext.Meals.Add(new Meal($"Recette {index}", "", Season.AllYear, MealStyle.Quick, 10));
+            dbContext.Meals.Add(new Meal(OwnerId, $"Recette {index}", "", Season.AllYear, MealStyle.Quick, 10));
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        var secondPage = await new ListMealsHandler(dbContext)
+        var secondPage = await new ListMealsHandler(dbContext, _currentUser)
             .HandleAsync(new ListMealsQuery(null, Page: 2, PageSize: 2), cancellationToken);
 
         secondPage.IsSuccess.Should().BeTrue();
@@ -189,7 +257,7 @@ public sealed class MealCrudHandlersTests(MySqlFixture fixture)
     private async Task<MealsDbContext> CreateFreshDbContextAsync(CancellationToken cancellationToken)
     {
         var options = new DbContextOptionsBuilder<MealsDbContext>()
-            .UseMySQL(fixture.ConnectionString)
+            .UseSqlServer(fixture.ConnectionString)
             .Options;
 
         var dbContext = new MealsDbContext(options);

@@ -15,6 +15,7 @@ internal static class ListMealsEndpoint
     public static void Map(IEndpointRouteBuilder endpoints)
     {
         endpoints.MapGet("/api/meals", HandleAsync)
+            .RequireAuthorization()
             .WithName("ListMeals")
             .WithTags("Meals")
             .WithSummary("Liste le catalogue de recettes, filtré et paginé.");

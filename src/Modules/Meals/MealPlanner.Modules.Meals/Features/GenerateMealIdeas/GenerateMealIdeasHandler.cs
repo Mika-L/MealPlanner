@@ -1,23 +1,23 @@
-using System.Globalization;
-using System.Text;
-
 using MealPlanner.Modules.Meals.Domain;
 using MealPlanner.Modules.Meals.Infrastructure;
 using MealPlanner.SharedKernel.Cqrs;
+using MealPlanner.SharedKernel.Identity;
 using MealPlanner.SharedKernel.Results;
 
 using Microsoft.EntityFrameworkCore;
 
 namespace MealPlanner.Modules.Meals.Features.GenerateMealIdeas;
 
-internal sealed class GenerateMealIdeasHandler(MealsDbContext dbContext)
+internal sealed class GenerateMealIdeasHandler(MealsDbContext dbContext, ICurrentUser currentUser)
     : IQueryHandler<GenerateMealIdeasQuery, Result<GenerateMealIdeasResponse>>
 {
     public async Task<Result<GenerateMealIdeasResponse>> HandleAsync(
         GenerateMealIdeasQuery query,
         CancellationToken cancellationToken)
     {
+        // Les idées ne piochent que dans le catalogue de l'utilisateur courant.
         var meals = dbContext.Meals
+            .Where(meal => meal.OwnerId == currentUser.UserId)
             .Include(meal => meal.Ingredients)
             .AsQueryable();
 
@@ -80,7 +80,7 @@ internal sealed class GenerateMealIdeasHandler(MealsDbContext dbContext)
         int days)
     {
         var pantry = availableIngredients
-            .Select(term => (Original: term.Trim(), Normalized: Normalize(term)))
+            .Select(term => (Original: term.Trim(), Normalized: SearchText.Normalize(term)))
             .Where(term => term.Normalized.Length > 0)
             .DistinctBy(term => term.Normalized)
             .ToList();
@@ -90,7 +90,7 @@ internal sealed class GenerateMealIdeasHandler(MealsDbContext dbContext)
             {
                 Meal = meal,
                 Matched = pantry
-                    .Where(term => meal.Ingredients.Any(ingredient => Normalize(ingredient.Name).Contains(term.Normalized)))
+                    .Where(term => meal.Ingredients.Any(ingredient => SearchText.Normalize(ingredient.Name).Contains(term.Normalized)))
                     .ToList(),
             })
             .ToList();
@@ -133,23 +133,6 @@ internal sealed class GenerateMealIdeasHandler(MealsDbContext dbContext)
         }
 
         return plan;
-    }
-
-    // Minuscule + suppression des accents pour une comparaison tolérante ("gruyere" ~ "Gruyère râpé").
-    private static string Normalize(string value)
-    {
-        var decomposed = value.Trim().ToLowerInvariant().Normalize(NormalizationForm.FormD);
-        var builder = new StringBuilder(decomposed.Length);
-
-        foreach (var character in decomposed)
-        {
-            if (CharUnicodeInfo.GetUnicodeCategory(character) != UnicodeCategory.NonSpacingMark)
-            {
-                builder.Append(character);
-            }
-        }
-
-        return builder.ToString().Normalize(NormalizationForm.FormC);
     }
 
     private sealed record PlanEntry(Meal Meal, IReadOnlyList<string> Matched);

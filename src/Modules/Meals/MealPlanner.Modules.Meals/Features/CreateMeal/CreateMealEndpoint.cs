@@ -14,6 +14,7 @@ internal static class CreateMealEndpoint
     public static void Map(IEndpointRouteBuilder endpoints)
     {
         endpoints.MapPost("/api/meals", HandleAsync)
+            .RequireAuthorization()
             .WithName("CreateMeal")
             .WithTags("Meals")
             .WithSummary("Ajoute une nouvelle recette au catalogue.");

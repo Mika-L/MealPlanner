@@ -1,19 +1,17 @@
+# SQL Server local pour le développement (l'API cible localhost,1433 via appsettings.json).
+# En dev/prod Azure, la base est un Azure SQL Database serverless (voir infra/ + README).
+# L'API crée la base « MealPlanner » et applique les migrations au démarrage.
 services:
-  mysql:
-    image: mysql:8.4
-    container_name: mealplanner-mysql
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    platform: linux/amd64 # image amd64 : émulée sur Apple Silicon
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: mealplanner
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "LocalDev_p4ssw0rd"
     ports:
-      - "3306:3306"
+      - "1433:1433"
     volumes:
-      - mealplanner-mysql-data:/var/lib/mysql
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      - mssql-data:/var/opt/mssql
 
 volumes:
-  mealplanner-mysql-data:
+  mssql-data:
