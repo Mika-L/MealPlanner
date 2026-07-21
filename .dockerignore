@@ -1,0 +1,15 @@
+# Artefacts de build .NET
+**/bin/
+**/obj/
+# Dépendances et build du front
+**/node_modules/
+web/meal-planner-web/dist/
+# Bases SQLite locales (obsolètes) et divers
+*.db
+*.db-shm
+*.db-wal
+.git/
+.github/
+infra/
+**/.vs/
+**/.idea/

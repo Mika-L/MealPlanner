@@ -73,19 +73,37 @@ dotnet test tests/MealPlanner.Modules.Identity.IntegrationTests/MealPlanner.Modu
 cd web/meal-planner-web && npm test
 ```
 
-## Déploiement (production / Azure)
+## Déploiement (Azure — dev & prod)
 
-Les migrations sont appliquées **au démarrage dans tous les environnements** (SQLite mono-instance) ;
-le dossier du fichier de base est créé automatiquement s'il manque. En dehors de `Development`, un
-échec d'initialisation fait **échouer le démarrage** (fail-fast) plutôt que de servir une app cassée.
+Stack **« tout gratuit »** : **Azure SQL** serverless (offre gratuite, auto-pause) + **Container App**
+scale-to-zero, image publique sur **ghcr.io**, un environnement par *resource group*
+(`rg-mealplanner-dev` / `-prod`), région **France Central**. L'API sert le SPA en *same-origin*
+(image conteneur unique). Auth SQL en **Managed Identity** (aucun mot de passe). Coût ~0 € pour les
+deux environnements ; contrepartie : *cold start* (~30-60 s) au réveil après inactivité.
 
-- **Base persistante** : `appsettings.Production.json` pointe par défaut vers `Data Source=/home/data/mealplanner.db`
-  (`/home` est le stockage persistant d'Azure App Service Linux). Surchargeable par variables d'environnement :
-  `ConnectionStrings__MealsDb` / `ConnectionStrings__IdentityDb` (les deux visent le même fichier).
-- **Secret JWT** : jamais commité. À fournir via variable d'environnement `Jwt__SigningKey` (≥ 32 octets)
-  ou les App Settings Azure. Idem `Authentication__Google__ClientId`, `Authentication__Facebook__*` si utilisés.
-- **Sauvegarde** : la base est un simple fichier — copie de `mealplanner.db` (idéalement à froid, ou via
-  réplication continue type Litestream vers un Blob Storage).
+Les migrations sont appliquées **au démarrage** ; hors `Development` un échec fait **échouer le
+démarrage** (fail-fast). En prod, l'API est en `Production` (voir le `Dockerfile`) et lit sa
+configuration via variables d'environnement injectées par le Container App.
+
+- **Infra as code** : `infra/main.bicep` (paramétré par `environmentName`), déployé par
+  `.github/workflows/deploy.yml`.
+- **Connexion SQL** : injectée par le Container App (`ConnectionStrings__MealsDb` / `__IdentityDb`),
+  en `Authentication=Active Directory Managed Identity`. La MI reçoit ses droits
+  (`db_datareader`/`db_datawriter`/`db_ddladmin`) via une étape T-SQL du pipeline.
+- **Secret JWT** : `Jwt__SigningKey` (≥ 32 octets), secret GitHub `JWT_SIGNING_KEY` → secret du
+  Container App. Idem `Authentication__Google__*` / `Facebook__*` si utilisés (à ajouter au Bicep).
+
+### Prérequis (une seule fois)
+
+1. **App Entra + fédération OIDC** pour GitHub Actions ; secrets repo/environnement :
+   `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, `AZURE_SUBSCRIPTION_ID`, `JWT_SIGNING_KEY` ; variables
+   `AZURE_ADMIN_LOGIN` (nom d'affichage du principal) et `AZURE_ADMIN_OBJECT_ID` (son *object id*,
+   `az ad sp show --id <AZURE_CLIENT_ID> --query id -o tsv`) — ce principal devient l'admin Entra du serveur SQL.
+2. **Environnements GitHub** `dev` et `prod` (le `prod` peut exiger une approbation).
+3. Après le **premier push d'image**, passer le package ghcr **`mealplanner` en visibilité publique**
+   (sinon le Container App ne peut pas le tirer anonymement).
+
+Déclenchement : push sur `main` → **dev** ; `workflow_dispatch` → **dev** ou **prod**.
 
 ## Endpoint disponible
 
