@@ -26,7 +26,7 @@ public static class MealsModule
         var connectionString = configuration.GetConnectionString(ConnectionStringName)
             ?? throw new InvalidOperationException($"Chaîne de connexion '{ConnectionStringName}' introuvable.");
 
-        services.AddDbContext<MealsDbContext>(options => options.UseMySQL(connectionString));
+        services.AddDbContext<MealsDbContext>(options => options.UseSqlite(connectionString));
 
         services.AddDispatcher();
         services.AddCqrsHandlersFromAssembly(typeof(MealsModule).Assembly);
@@ -56,5 +56,8 @@ public static class MealsModule
         var dbContext = scope.ServiceProvider.GetRequiredService<MealsDbContext>();
 
         await dbContext.Database.MigrateAsync(cancellationToken);
+
+        // WAL : meilleures lectures concurrentes pendant une écriture. Réglage persistant sur le fichier.
+        await dbContext.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;", cancellationToken);
     }
 }

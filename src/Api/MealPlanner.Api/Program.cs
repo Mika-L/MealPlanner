@@ -42,17 +42,23 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
     app.MapScalarApiReference();
+}
 
-    // Migrations automatiques en dev ; l'API démarre même si la base est indisponible.
-    try
-    {
-        await app.Services.InitializeIdentityModuleAsync();
-        await app.Services.InitializeMealsModuleAsync();
-    }
-    catch (Exception exception)
-    {
-        app.Logger.LogWarning(exception, "Initialisation des modules impossible (base indisponible ?).");
-    }
+// Migrations appliquées au démarrage (SQLite mono-instance), dans tous les environnements.
+// Le dossier du fichier est créé si besoin (ex. /home/data sur Azure App Service).
+SqliteStorage.EnsureDirectoryExists(app.Configuration.GetConnectionString(IdentityModule.ConnectionStringName));
+SqliteStorage.EnsureDirectoryExists(app.Configuration.GetConnectionString(MealsModule.ConnectionStringName));
+
+try
+{
+    await app.Services.InitializeIdentityModuleAsync();
+    await app.Services.InitializeMealsModuleAsync();
+}
+catch (Exception exception) when (app.Environment.IsDevelopment())
+{
+    // En dev uniquement : l'API démarre même si la base est indisponible.
+    // Hors dev, l'exception remonte et fait échouer le démarrage (fail-fast).
+    app.Logger.LogWarning(exception, "Initialisation des modules impossible (base indisponible ?).");
 }
 
 app.MapGet("/health", () => Results.Ok(new { status = "ok" })).WithTags("System");

@@ -4,10 +4,10 @@ Générateur d'idées de repas selon des critères (saison, style *healthy/réco
 
 ## Stack
 
-- **Backend** : .NET 10 / C# 14, ASP.NET Core (Minimal API), EF Core 10, MySQL (provider Oracle `MySql.EntityFrameworkCore`), Serilog.
+- **Backend** : .NET 10 / C# 14, ASP.NET Core (Minimal API), EF Core 10, SQLite (provider `Microsoft.EntityFrameworkCore.Sqlite`, mode WAL), Serilog.
 - **Architecture** : monolithe modulaire + vertical slice léger + CQRS (dispatcher maison, sans MediatR).
 - **Front** : React 19 + TypeScript, Vite.
-- **Tests** : xUnit v3, FluentAssertions, NSubstitute, AutoFixture, Testcontainers (MySQL réel), WebApplicationFactory, NetArchTest ; Vitest + Testing Library côté front.
+- **Tests** : xUnit v3, FluentAssertions, NSubstitute, AutoFixture, SQLite (fichier temporaire, sans Docker), WebApplicationFactory, NetArchTest ; Vitest + Testing Library côté front.
 
 ## Structure
 
@@ -21,7 +21,7 @@ src/
     Features/GenerateMealIdeas/             #   1 slice = Query + Validator + Handler + Endpoint
 tests/
   *.UnitTests            # tests unitaires (xUnit v3 + FluentAssertions + NSubstitute + AutoFixture)
-  *.IntegrationTests     # MySQL réel via Testcontainers (Docker requis)
+  *.IntegrationTests     # SQLite sur fichier temporaire (aucun service externe)
   *.FunctionalTests      # HTTP bout-en-bout via WebApplicationFactory
   ArchitectureTests      # règles d'architecture (NetArchTest)
 web/meal-planner-web/    # front React + Vite + Vitest
@@ -33,21 +33,25 @@ vivent dans le module, à côté de leur handler (vertical slice).
 ## Démarrer
 
 ```bash
-# 1. Base de données
-docker compose up -d
-
-# 2. Lancer l'API (Scalar sur /scalar/v1 en Development)
-#    En Development, les migrations sont appliquées ET le catalogue est seedé automatiquement au démarrage.
+# 1. Lancer l'API (Scalar sur /scalar/v1 en Development)
+#    En Development, les migrations sont appliquées au démarrage ; SQLite crée le fichier
+#    mealplanner.db (+ .db-wal/.db-shm) dans le dossier de l'API à la première exécution.
+#    Le catalogue de démarrage est cloné pour chaque utilisateur à son inscription.
 dotnet run --project src/Api/MealPlanner.Api
 
-# 3. Front
+# 2. Front
 cd web/meal-planner-web && npm install && npm run dev
 ```
 
-> Hors Development (ou pour appliquer les migrations à la main) :
+> Aucun service externe requis : SQLite est une base fichier embarquée.
+>
+> Hors Development (ou pour appliquer les migrations à la main) — un contexte par module :
 > ```bash
-> dotnet dotnet-ef database update \
+> dotnet dotnet-ef database update --context MealsDbContext \
 >   --project src/Modules/Meals/MealPlanner.Modules.Meals \
+>   --startup-project src/Api/MealPlanner.Api
+> dotnet dotnet-ef database update --context AppIdentityDbContext \
+>   --project src/Modules/Identity/MealPlanner.Modules.Identity \
 >   --startup-project src/Api/MealPlanner.Api
 > ```
 
@@ -59,11 +63,26 @@ dotnet test tests/MealPlanner.SharedKernel.UnitTests/MealPlanner.SharedKernel.Un
 dotnet test tests/MealPlanner.Modules.Meals.UnitTests/MealPlanner.Modules.Meals.UnitTests.csproj
 dotnet test tests/MealPlanner.ArchitectureTests/MealPlanner.ArchitectureTests.csproj
 dotnet test tests/MealPlanner.Api.FunctionalTests/MealPlanner.Api.FunctionalTests.csproj
-dotnet test tests/MealPlanner.Modules.Meals.IntegrationTests/MealPlanner.Modules.Meals.IntegrationTests.csproj  # Docker requis
+dotnet test tests/MealPlanner.Modules.Meals.IntegrationTests/MealPlanner.Modules.Meals.IntegrationTests.csproj
+dotnet test tests/MealPlanner.Modules.Identity.IntegrationTests/MealPlanner.Modules.Identity.IntegrationTests.csproj
 
 # Front
 cd web/meal-planner-web && npm test
 ```
+
+## Déploiement (production / Azure)
+
+Les migrations sont appliquées **au démarrage dans tous les environnements** (SQLite mono-instance) ;
+le dossier du fichier de base est créé automatiquement s'il manque. En dehors de `Development`, un
+échec d'initialisation fait **échouer le démarrage** (fail-fast) plutôt que de servir une app cassée.
+
+- **Base persistante** : `appsettings.Production.json` pointe par défaut vers `Data Source=/home/data/mealplanner.db`
+  (`/home` est le stockage persistant d'Azure App Service Linux). Surchargeable par variables d'environnement :
+  `ConnectionStrings__MealsDb` / `ConnectionStrings__IdentityDb` (les deux visent le même fichier).
+- **Secret JWT** : jamais commité. À fournir via variable d'environnement `Jwt__SigningKey` (≥ 32 octets)
+  ou les App Settings Azure. Idem `Authentication__Google__ClientId`, `Authentication__Facebook__*` si utilisés.
+- **Sauvegarde** : la base est un simple fichier — copie de `mealplanner.db` (idéalement à froid, ou via
+  réplication continue type Litestream vers un Blob Storage).
 
 ## Endpoint disponible
 
