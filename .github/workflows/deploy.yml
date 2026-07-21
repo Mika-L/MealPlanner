@@ -1,0 +1,108 @@
+name: Deploy
+
+# Push sur main -> déploie dev. Déclenchement manuel -> dev ou prod (prod peut être protégé par une
+# règle d'approbation via l'environnement GitHub « prod »).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Environnement cible
+        type: choice
+        options: [dev, prod]
+        default: dev
+
+permissions:
+  id-token: write # OIDC vers Azure
+  contents: read
+  packages: write # push vers ghcr.io
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Calculer le nom d'image (ghcr, minuscules)
+        id: meta
+        run: echo "image=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]'):${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push (linux/amd64)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.image }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    # Scope les secrets/variables par environnement (dev/prod) et active l'éventuel gate d'approbation.
+    environment: ${{ github.event.inputs.environment || 'dev' }}
+    env:
+      ENV_NAME: ${{ github.event.inputs.environment || 'dev' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Déployer l'infrastructure (Bicep)
+        run: |
+          set -euo pipefail
+          RG="rg-mealplanner-${ENV_NAME}"
+          az group create -n "$RG" -l francecentral -o none
+          outputs=$(az deployment group create \
+            --resource-group "$RG" \
+            --template-file infra/main.bicep \
+            --parameters \
+              environmentName="$ENV_NAME" \
+              containerImage="${{ needs.build.outputs.image }}" \
+              jwtSigningKey="${{ secrets.JWT_SIGNING_KEY }}" \
+              sqlAdminLogin="${{ vars.AZURE_ADMIN_LOGIN }}" \
+              sqlAdminObjectId="${{ vars.AZURE_ADMIN_OBJECT_ID }}" \
+              sqlAdminPrincipalType=Group \
+            --query properties.outputs -o json)
+          {
+            echo "RG=$RG"
+            echo "SQL_FQDN=$(echo "$outputs" | jq -r .sqlServerFqdn.value)"
+            echo "MI_NAME=$(echo "$outputs" | jq -r .managedIdentityName.value)"
+            echo "APP_FQDN=$(echo "$outputs" | jq -r .containerAppFqdn.value)"
+          } >> "$GITHUB_ENV"
+
+      - name: Autoriser la Managed Identity sur la base (T-SQL)
+        run: |
+          set -euo pipefail
+          curl -fsSL -o sqlcmd.tar.bz2 \
+            https://github.com/microsoft/go-sqlcmd/releases/download/v1.8.0/sqlcmd-linux-amd64.tar.bz2
+          tar xjf sqlcmd.tar.bz2
+          # Se connecte en tant qu'admin Entra (le principal OIDC) et donne à la MI les droits EF
+          # (migrations = DDL -> db_ddladmin ; CRUD -> datareader/datawriter). Idempotent.
+          ./sqlcmd -S "tcp:${SQL_FQDN},1433" -d mealplanner \
+            --authentication-method ActiveDirectoryAzureCli \
+            -Q "IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'${MI_NAME}') CREATE USER [${MI_NAME}] FROM EXTERNAL PROVIDER; ALTER ROLE db_datareader ADD MEMBER [${MI_NAME}]; ALTER ROLE db_datawriter ADD MEMBER [${MI_NAME}]; ALTER ROLE db_ddladmin ADD MEMBER [${MI_NAME}];"
+
+      - name: Redémarrer le Container App (migrations post-autorisation)
+        run: |
+          set -euo pipefail
+          revision=$(az containerapp show -n "ca-mealplanner-${ENV_NAME}" -g "$RG" \
+            --query properties.latestRevisionName -o tsv)
+          az containerapp revision restart -n "ca-mealplanner-${ENV_NAME}" -g "$RG" --revision "$revision" -o none
+
+      - name: Récapitulatif
+        run: echo "Déployé sur ${ENV_NAME} — https://${APP_FQDN}" >> "$GITHUB_STEP_SUMMARY"
