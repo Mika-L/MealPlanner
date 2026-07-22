@@ -82,7 +82,11 @@ resource sqlServer 'Microsoft.Sql/servers@2023-08-01-preview' = {
   }
 }
 
-// Autorise les services Azure (dont le Container App) à joindre le serveur.
+// La règle 0.0.0.0 ouvre le port 1433 à TOUT service Azure (tous tenants, toutes souscriptions),
+// pas seulement à notre Container App. Trade-off accepté : le serveur est en `azureADOnlyAuthentication`,
+// donc aucun mot de passe SQL à brute-forcer — se connecter exige un token Entra de NOTRE tenant émis
+// pour un principal ayant des droits sur la base. Pour durcir (isoler au seul Container App), il faudrait
+// un private endpoint ou une IP sortante statique via VNet — tous deux payants, ce qui casse la stack « tout gratuit ».
 resource allowAzure 'Microsoft.Sql/servers/firewallRules@2023-08-01-preview' = {
   parent: sqlServer
   name: 'AllowAllWindowsAzureIps'
