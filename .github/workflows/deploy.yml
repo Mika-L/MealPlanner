@@ -90,6 +90,10 @@ jobs:
         run: |
           set -euo pipefail
           SQL_SERVER="${SQL_FQDN%%.*}"
+          # clientId de la MI : sert de SID pour créer l'utilisateur SANS interroger Entra. `FROM EXTERNAL
+          # PROVIDER` exigerait une identité serveur + permission Directory Reader (absente ici) ; la
+          # création par SID n'a aucune de ces dépendances.
+          MI_CLIENT_ID=$(az identity show -n "$MI_NAME" -g "$RG" --query clientId -o tsv)
           # Le runner GitHub n'est pas un service Azure : on ouvre le firewall SQL pour son IP
           # publique le temps du GRANT (règle retirée par l'étape de nettoyage ci-dessous).
           RUNNER_IP=$(curl -fsSL https://api.ipify.org)
@@ -98,11 +102,13 @@ jobs:
           curl -fsSL -o sqlcmd.tar.bz2 \
             https://github.com/microsoft/go-sqlcmd/releases/download/v1.8.0/sqlcmd-linux-amd64.tar.bz2
           tar xjf sqlcmd.tar.bz2
-          # Se connecte en tant qu'admin Entra (le principal OIDC, membre du groupe admin) et donne à la
-          # MI les droits EF (migrations = DDL -> db_ddladmin ; CRUD -> datareader/datawriter). Idempotent.
+          # Se connecte en tant qu'admin Entra (le principal OIDC, membre du groupe admin) et donne à la MI
+          # les droits EF (migrations = DDL -> db_ddladmin ; CRUD -> datareader/datawriter). L'utilisateur
+          # est créé par SID (= clientId de la MI, converti côté SQL). Idempotent. `-b` : sqlcmd sort en
+          # erreur si le T-SQL échoue (sinon un GRANT cassé laisserait le déploiement passer « vert »).
           ./sqlcmd -S "tcp:${SQL_FQDN},1433" -d mealplanner \
-            --authentication-method ActiveDirectoryAzCli \
-            -Q "IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'${MI_NAME}') CREATE USER [${MI_NAME}] FROM EXTERNAL PROVIDER; ALTER ROLE db_datareader ADD MEMBER [${MI_NAME}]; ALTER ROLE db_datawriter ADD MEMBER [${MI_NAME}]; ALTER ROLE db_ddladmin ADD MEMBER [${MI_NAME}];"
+            --authentication-method ActiveDirectoryAzCli -b \
+            -Q "DECLARE @sidHex nvarchar(64) = CONVERT(nvarchar(64), CONVERT(varbinary(16), CAST(N'${MI_CLIENT_ID}' AS uniqueidentifier)), 1); IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'${MI_NAME}') EXEC (N'CREATE USER [${MI_NAME}] WITH SID = ' + @sidHex + N', TYPE = E;'); ALTER ROLE db_datareader ADD MEMBER [${MI_NAME}]; ALTER ROLE db_datawriter ADD MEMBER [${MI_NAME}]; ALTER ROLE db_ddladmin ADD MEMBER [${MI_NAME}];"
 
       - name: Retirer la règle firewall temporaire du runner
         if: always()
