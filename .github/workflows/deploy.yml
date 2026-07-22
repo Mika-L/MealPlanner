@@ -1,10 +1,10 @@
 name: Deploy
 
-# Push sur main -> déploie dev. Déclenchement manuel -> dev ou prod (prod peut être protégé par une
-# règle d'approbation via l'environnement GitHub « prod »).
+# Push sur develop -> déploie dev ; push sur main -> déploie prod (protégé par la règle d'approbation
+# de l'environnement GitHub « prod »). Déclenchement manuel -> dev ou prod au choix.
 on:
   push:
-    branches: [main]
+    branches: [develop, main]
   workflow_dispatch:
     inputs:
       environment:
@@ -50,9 +50,10 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     # Scope les secrets/variables par environnement (dev/prod) et active l'éventuel gate d'approbation.
-    environment: ${{ github.event.inputs.environment || 'dev' }}
+    # Push main -> prod ; push develop -> dev ; workflow_dispatch -> valeur choisie.
+    environment: ${{ github.event.inputs.environment || (github.ref_name == 'main' && 'prod' || 'dev') }}
     env:
-      ENV_NAME: ${{ github.event.inputs.environment || 'dev' }}
+      ENV_NAME: ${{ github.event.inputs.environment || (github.ref_name == 'main' && 'prod' || 'dev') }}
     steps:
       - uses: actions/checkout@v4
 
