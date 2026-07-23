@@ -70,6 +70,35 @@ describe('AuthPage', () => {
     expect(screen.getByLabelText('Nom affiché (optionnel)')).toBeInTheDocument()
   })
 
+  it('toggles the password between hidden and visible', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    const passwordField = screen.getByLabelText('Mot de passe')
+    expect(passwordField).toHaveAttribute('type', 'password')
+
+    await user.click(screen.getByRole('button', { name: 'Afficher le mot de passe' }))
+    expect(passwordField).toHaveAttribute('type', 'text')
+
+    await user.click(screen.getByRole('button', { name: 'Masquer le mot de passe' }))
+    expect(passwordField).toHaveAttribute('type', 'password')
+  })
+
+  it('shows the password rules upfront and marks them as met while typing', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByRole('tab', { name: 'Inscription' }))
+
+    const rule = screen.getByText('Au moins 8 caractères')
+    expect(rule).toBeInTheDocument()
+    expect(rule).not.toHaveClass('auth__rule--met')
+
+    await user.type(screen.getByLabelText('Mot de passe'), 'phrase de passe')
+
+    expect(rule).toHaveClass('auth__rule--met')
+  })
+
   it('shows the error returned by the API on a failed login', async () => {
     const user = userEvent.setup()
     vi.mocked(authClient.login).mockRejectedValue(new Error('Email ou mot de passe incorrect.'))

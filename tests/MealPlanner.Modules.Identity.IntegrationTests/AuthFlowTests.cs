@@ -60,6 +60,22 @@ public sealed class AuthFlowTests(IdentityModuleFixture fixture)
     }
 
     [Fact]
+    public async Task Register_should_accept_a_lowercase_passphrase_without_composition_rules()
+    {
+        // NIST : aucune exigence majuscule/chiffre/spécial ne doit bloquer une phrase de passe longue.
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var provider = await fixture.CreateProviderAsync(null, cancellationToken);
+
+        await using var scope = provider.CreateAsyncScope();
+        var result = await scope.ServiceProvider.GetRequiredService<IDispatcher>()
+            .SendAsync(
+                new RegisterCommand("passphrase@example.com", "correct horse battery staple", null),
+                cancellationToken);
+
+        result.IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
     public async Task Login_should_succeed_with_the_right_password_and_fail_otherwise()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
