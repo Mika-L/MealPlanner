@@ -23,17 +23,17 @@ describe('PreferencesPage', () => {
     delete document.documentElement.dataset.palette
   })
 
-  it('offers both the Stone and Coral themes', () => {
+  it('offers both the Sauge and Coral themes', () => {
     renderPage()
 
-    expect(screen.getByRole('radio', { name: /Stone/ })).toBeInTheDocument()
+    expect(screen.getByRole('radio', { name: /Sauge/ })).toBeInTheDocument()
     expect(screen.getByRole('radio', { name: /Corail/ })).toBeInTheDocument()
   })
 
-  it('selects Stone by default', () => {
+  it('selects Sauge by default', () => {
     renderPage()
 
-    expect(screen.getByRole('radio', { name: /Stone/ })).toBeChecked()
+    expect(screen.getByRole('radio', { name: /Sauge/ })).toBeChecked()
     expect(screen.getByRole('radio', { name: /Corail/ })).not.toBeChecked()
     expect(document.documentElement.dataset.palette).toBe('stone')
   })

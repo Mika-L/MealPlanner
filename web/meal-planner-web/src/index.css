@@ -1,41 +1,43 @@
 :root {
-  /* Thème par défaut = Stone. Le thème actif est piloté par [data-palette]
-     sur <html> ; chaque palette ne redéfinit que ses tokens de couleur. */
+  /* Thème par défaut = Corail (voir defaultTheme). Le thème actif est piloté
+     par [data-palette] sur <html> ; chaque palette ne redéfinit que ses tokens
+     de couleur. Le bloc :root porte aussi la palette « Sauge » (id 'stone'). */
 
-  /* Palette Stone : greige chaud (façade Plum Living Stone) + accent laiton */
-  --grad-warm: linear-gradient(135deg, #9a8d78 0%, #837962 48%, #6d6353 100%);
-  --grad-warm-soft: linear-gradient(135deg, #948977 0%, #7c7260 100%);
+  /* Palette Sauge : teintes de la cuisine (façades vert sauge, chêne clair,
+     mur blanc cassé, laiton) — accent sauge + secondaire laiton */
+  --grad-warm: linear-gradient(135deg, #93ac8f 0%, #7f9a80 48%, #6a8a6c 100%);
+  --grad-warm-soft: linear-gradient(135deg, #9db69a 0%, #86a487 100%);
 
-  --accent: #8c8273;
-  --accent-strong: #736a5c;
-  --accent-ink: #57503f;
-  --accent-bg: rgba(140, 130, 115, 0.12);
-  --accent-border: rgba(140, 130, 115, 0.3);
-  --accent-2: #b1936a;
+  --accent: #7f9a80;
+  --accent-strong: #6a8a6c;
+  --accent-ink: #46503c;
+  --accent-bg: rgba(127, 154, 128, 0.12);
+  --accent-border: rgba(127, 154, 128, 0.3);
+  --accent-2: #b8935a;
   /* Triplet RGB de la lueur d'accent (ombres colorées) */
-  --accent-glow: 120, 108, 88;
+  --accent-glow: 110, 138, 112;
 
-  --text: #5f584e;
-  --text-soft: #948c80;
-  --text-h: #2e281f;
+  --text: #5c5f54;
+  --text-soft: #8f9285;
+  --text-h: #2c3128;
 
-  --bg: #f6f2ec;
-  --bg-tint-1: rgba(168, 156, 136, 0.18);
-  --bg-tint-2: rgba(177, 147, 106, 0.14);
-  --bg-tint-3: rgba(120, 112, 96, 0.12);
+  --bg: #f7f5f0;
+  --bg-tint-1: rgba(127, 154, 128, 0.16);
+  --bg-tint-2: rgba(184, 147, 90, 0.13);
+  --bg-tint-3: rgba(120, 130, 112, 0.1);
 
   --surface: rgba(255, 255, 255, 0.72);
   --surface-solid: #ffffff;
-  --border: rgba(46, 40, 31, 0.08);
-  --border-strong: rgba(46, 40, 31, 0.14);
+  --border: rgba(44, 49, 40, 0.08);
+  --border-strong: rgba(44, 49, 40, 0.14);
 
   --field-bg: rgba(255, 255, 255, 0.7);
 
-  --shadow-sm: 0 1px 2px rgba(46, 40, 31, 0.06);
+  --shadow-sm: 0 1px 2px rgba(44, 49, 40, 0.06);
   --shadow-md:
-    0 12px 30px -12px rgba(120, 108, 88, 0.3), 0 6px 14px -8px rgba(46, 40, 31, 0.12);
+    0 12px 30px -12px rgba(110, 138, 112, 0.3), 0 6px 14px -8px rgba(44, 49, 40, 0.12);
   --shadow-lg:
-    0 28px 60px -24px rgba(120, 108, 88, 0.42), 0 12px 24px -14px rgba(46, 40, 31, 0.16);
+    0 28px 60px -24px rgba(110, 138, 112, 0.42), 0 12px 24px -14px rgba(44, 49, 40, 0.16);
 
   --radius-lg: 24px;
   --radius-md: 16px;
@@ -92,24 +94,24 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --accent: #c8bda9;
-    --accent-strong: #d5cbb9;
-    --accent-ink: #e0d7c6;
-    --accent-bg: rgba(200, 189, 169, 0.16);
-    --accent-border: rgba(200, 189, 169, 0.38);
-    --accent-2: #cdac80;
+    --accent: #a9c0a6;
+    --accent-strong: #bccfb9;
+    --accent-ink: #cdddc9;
+    --accent-bg: rgba(169, 192, 166, 0.16);
+    --accent-border: rgba(169, 192, 166, 0.38);
+    --accent-2: #d0b183;
 
-    --text: #b8b0a2;
-    --text-soft: #8b8479;
-    --text-h: #f4efe6;
+    --text: #b3b8a8;
+    --text-soft: #868b7c;
+    --text-h: #eef1e8;
 
-    --bg: #17140f;
-    --bg-tint-1: rgba(168, 156, 136, 0.14);
-    --bg-tint-2: rgba(177, 147, 106, 0.14);
-    --bg-tint-3: rgba(120, 112, 96, 0.16);
+    --bg: #181b13;
+    --bg-tint-1: rgba(169, 192, 166, 0.14);
+    --bg-tint-2: rgba(208, 177, 131, 0.13);
+    --bg-tint-3: rgba(120, 140, 112, 0.16);
 
-    --surface: rgba(40, 36, 29, 0.66);
-    --surface-solid: #26221b;
+    --surface: rgba(38, 42, 32, 0.66);
+    --surface-solid: #262a20;
     --border: rgba(255, 255, 255, 0.08);
     --border-strong: rgba(255, 255, 255, 0.16);
 
