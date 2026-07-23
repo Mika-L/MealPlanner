@@ -40,12 +40,21 @@ public static class IdentityModule
 
         services.AddIdentityCore<AppUser>(options =>
             {
-                options.Password.RequiredLength = 8;
+                // NIST SP 800-63B : la longueur prime, pas de règles de composition arbitraires.
+                // On désactive donc les exigences majuscule/minuscule/chiffre/spécial d'Identity.
+                options.Password.RequiredLength = RegisterValidator.MinPasswordLength;
+                options.Password.RequireDigit = false;
+                options.Password.RequireLowercase = false;
+                options.Password.RequireUppercase = false;
                 options.Password.RequireNonAlphanumeric = false;
+                options.Password.RequiredUniqueChars = 1;
                 options.User.RequireUniqueEmail = true;
             })
             .AddRoles<IdentityRole<Guid>>()
             .AddEntityFrameworkStores<AppIdentityDbContext>();
+
+        // Hachage Argon2id (OWASP) en remplacement du PasswordHasher PBKDF2 par défaut d'Identity.
+        services.Replace(ServiceDescriptor.Scoped<IPasswordHasher<AppUser>, Argon2PasswordHasher>());
 
         services.TryAddSingleton(TimeProvider.System);
 

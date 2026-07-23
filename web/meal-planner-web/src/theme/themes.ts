@@ -11,9 +11,9 @@ export interface ThemeOption {
 export const themes: ThemeOption[] = [
   {
     id: 'stone',
-    label: 'Stone',
-    description: 'Greige chaud et minéral, dans la teinte des façades de cuisine Plum Living.',
-    swatches: ['#8c8273', '#b1936a', '#f6f2ec', '#57503f'],
+    label: 'Sauge',
+    description: 'Douce et lumineuse, dans les teintes de notre cuisine : sauge, chêne clair et laiton.',
+    swatches: ['#7f9a80', '#b8935a', '#f7f5f0', '#46503c'],
   },
   {
     id: 'coral',

@@ -19,6 +19,8 @@
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.10" />
     <PackageVersion Include="Microsoft.IdentityModel.JsonWebTokens" Version="8.19.2" />
     <PackageVersion Include="Google.Apis.Auth" Version="1.75.0" />
+    <!-- Hachage mot de passe : Argon2id (OWASP), remplace le PBKDF2 par défaut d'Identity -->
+    <PackageVersion Include="Konscious.Security.Cryptography.Argon2" Version="1.3.1" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
     <!-- Pin transitif : Microsoft.OpenApi 2.0.0 (tiré par AspNetCore.OpenApi) a une vuln NU1903 -->
     <PackageVersion Include="Microsoft.OpenApi" Version="2.11.0" />

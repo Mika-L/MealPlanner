@@ -24,22 +24,22 @@ jobs:
     outputs:
       image: ${{ steps.meta.outputs.image }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
       - name: Calculer le nom d'image (ghcr, minuscules)
         id: meta
         run: echo "image=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]'):${{ github.sha }}" >> "$GITHUB_OUTPUT"
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
 
-      - uses: docker/login-action@v3
+      - uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build & push (linux/amd64)
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           platforms: linux/amd64
@@ -55,9 +55,15 @@ jobs:
     env:
       ENV_NAME: ${{ github.event.inputs.environment || (github.ref_name == 'main' && 'prod' || 'dev') }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Vérifier que prod ne se déploie que depuis main
+        if: env.ENV_NAME == 'prod' && github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Déploiement prod refusé : seul main peut déployer en prod (ref actuelle : ${{ github.ref }})."
+          exit 1
 
-      - uses: azure/login@v2
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+      - uses: azure/login@93381592711f247e165c389ebb30b596c84cdc48 # v3.0.0
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -90,6 +96,10 @@ jobs:
         run: |
           set -euo pipefail
           SQL_SERVER="${SQL_FQDN%%.*}"
+          # clientId de la MI : sert de SID pour créer l'utilisateur SANS interroger Entra. `FROM EXTERNAL
+          # PROVIDER` exigerait une identité serveur + permission Directory Reader (absente ici) ; la
+          # création par SID n'a aucune de ces dépendances.
+          MI_CLIENT_ID=$(az identity show -n "$MI_NAME" -g "$RG" --query clientId -o tsv)
           # Le runner GitHub n'est pas un service Azure : on ouvre le firewall SQL pour son IP
           # publique le temps du GRANT (règle retirée par l'étape de nettoyage ci-dessous).
           RUNNER_IP=$(curl -fsSL https://api.ipify.org)
@@ -97,12 +107,17 @@ jobs:
             --start-ip-address "$RUNNER_IP" --end-ip-address "$RUNNER_IP" -o none
           curl -fsSL -o sqlcmd.tar.bz2 \
             https://github.com/microsoft/go-sqlcmd/releases/download/v1.8.0/sqlcmd-linux-amd64.tar.bz2
+          # Intégrité supply chain : SHA256 de l'asset sqlcmd-linux-amd64.tar.bz2 de la release v1.8.0.
+          # Bloque le déploiement si l'archive téléchargée diffère (release re-publiée / altérée).
+          echo "f748fa33eae645db1e05a07d990d0d2a8025cd319b6f7f0461e00eed18c865b4  sqlcmd.tar.bz2" | sha256sum -c -
           tar xjf sqlcmd.tar.bz2
-          # Se connecte en tant qu'admin Entra (le principal OIDC, membre du groupe admin) et donne à la
-          # MI les droits EF (migrations = DDL -> db_ddladmin ; CRUD -> datareader/datawriter). Idempotent.
+          # Se connecte en tant qu'admin Entra (le principal OIDC, membre du groupe admin) et donne à la MI
+          # les droits EF (migrations = DDL -> db_ddladmin ; CRUD -> datareader/datawriter). L'utilisateur
+          # est créé par SID (= clientId de la MI, converti côté SQL). Idempotent. `-b` : sqlcmd sort en
+          # erreur si le T-SQL échoue (sinon un GRANT cassé laisserait le déploiement passer « vert »).
           ./sqlcmd -S "tcp:${SQL_FQDN},1433" -d mealplanner \
-            --authentication-method ActiveDirectoryAzCli \
-            -Q "IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'${MI_NAME}') CREATE USER [${MI_NAME}] FROM EXTERNAL PROVIDER; ALTER ROLE db_datareader ADD MEMBER [${MI_NAME}]; ALTER ROLE db_datawriter ADD MEMBER [${MI_NAME}]; ALTER ROLE db_ddladmin ADD MEMBER [${MI_NAME}];"
+            --authentication-method ActiveDirectoryAzCli -b \
+            -Q "DECLARE @sidHex nvarchar(64) = CONVERT(nvarchar(64), CONVERT(varbinary(16), CAST(N'${MI_CLIENT_ID}' AS uniqueidentifier)), 1); IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'${MI_NAME}') EXEC (N'CREATE USER [${MI_NAME}] WITH SID = ' + @sidHex + N', TYPE = E;'); ALTER ROLE db_datareader ADD MEMBER [${MI_NAME}]; ALTER ROLE db_datawriter ADD MEMBER [${MI_NAME}]; ALTER ROLE db_ddladmin ADD MEMBER [${MI_NAME}];"
 
       - name: Retirer la règle firewall temporaire du runner
         if: always()
