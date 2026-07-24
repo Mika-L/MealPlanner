@@ -45,6 +45,9 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.image }}
+          # Client ID Google (public) inliné dans le bundle front au build ; vide -> bouton inactif.
+          build-args: |
+            VITE_GOOGLE_CLIENT_ID=${{ vars.GOOGLE_CLIENT_ID }}
 
   deploy:
     needs: build
@@ -81,6 +84,7 @@ jobs:
               environmentName="$ENV_NAME" \
               containerImage="${{ needs.build.outputs.image }}" \
               jwtSigningKey="${{ secrets.JWT_SIGNING_KEY }}" \
+              googleClientId="${{ vars.GOOGLE_CLIENT_ID }}" \
               sqlAdminLogin="${{ vars.AZURE_ADMIN_LOGIN }}" \
               sqlAdminObjectId="${{ vars.AZURE_ADMIN_OBJECT_ID }}" \
               sqlAdminPrincipalType=Group \

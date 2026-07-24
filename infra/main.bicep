@@ -18,6 +18,9 @@ param containerImage string
 @secure()
 param jwtSigningKey string
 
+@description('Client ID OAuth Google (public). Audience attendue des id_token. Vide -> connexion Google inactive.')
+param googleClientId string = ''
+
 @description('Login de l\'administrateur Entra du serveur SQL (nom d\'affichage du principal déployeur).')
 param sqlAdminLogin string
 
@@ -160,6 +163,7 @@ resource containerApp 'Microsoft.App/containerApps@2024-03-01' = {
             { name: 'ConnectionStrings__MealsDb', value: sqlConnectionString }
             { name: 'ConnectionStrings__IdentityDb', value: sqlConnectionString }
             { name: 'Jwt__SigningKey', secretRef: 'jwt-signing-key' }
+            { name: 'Authentication__Google__ClientId', value: googleClientId }
           ]
         }
       ]

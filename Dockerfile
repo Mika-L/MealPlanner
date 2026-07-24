@@ -6,6 +6,10 @@
 # --- Étape 1 : build du front (Vite) ---
 FROM node:22-alpine AS web
 WORKDIR /web
+# Client ID OAuth Google (public) : inliné par Vite dans le bundle au build.
+# Vide par défaut -> bouton Google inactif (l'auth email/mot de passe reste dispo).
+ARG VITE_GOOGLE_CLIENT_ID=""
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
 COPY web/meal-planner-web/package.json web/meal-planner-web/package-lock.json ./
 RUN npm ci
 COPY web/meal-planner-web/ ./
