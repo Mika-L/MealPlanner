@@ -4,6 +4,7 @@ using MealPlanner.Modules.Meals.Features.CreateMeal;
 using MealPlanner.Modules.Meals.Features.DeleteMeal;
 using MealPlanner.Modules.Meals.Features.GenerateMealIdeas;
 using MealPlanner.Modules.Meals.Features.ListMeals;
+using MealPlanner.Modules.Meals.Features.ReplaceMealIdea;
 using MealPlanner.Modules.Meals.Features.UpdateMeal;
 using MealPlanner.Modules.Meals.Infrastructure;
 using MealPlanner.SharedKernel.Cqrs;
@@ -41,6 +42,7 @@ public static class MealsModule
     public static IEndpointRouteBuilder MapMealsModule(this IEndpointRouteBuilder endpoints)
     {
         GenerateMealIdeasEndpoint.Map(endpoints);
+        ReplaceMealIdeaEndpoint.Map(endpoints);
         ListMealsEndpoint.Map(endpoints);
         CreateMealEndpoint.Map(endpoints);
         UpdateMealEndpoint.Map(endpoints);
