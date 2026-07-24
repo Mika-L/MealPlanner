@@ -44,11 +44,14 @@ describe('replaceMealIdea', () => {
     mockedFetch.mockReset()
   })
 
-  it('posts the criteria, the replaced day and the kept meal ids', async () => {
+  it('posts the criteria, the replaced day, the kept meal ids and the recipes already seen', async () => {
     const replacement = idea(1, 'Gratin')
     mockedFetch.mockResolvedValue(jsonResponse(200, { meal: replacement }))
 
-    const result = await replaceMealIdea(criteria(), idea(1, 'Omelette'), [idea(2, 'Soupe')])
+    const result = await replaceMealIdea(criteria(), idea(1, 'Omelette'), [idea(2, 'Soupe')], [
+      'Omelette',
+      'Quiche',
+    ])
 
     expect(result).toEqual(replacement)
     expect(mockedFetch.mock.calls[0][0]).toBe('/api/meals/ideas/replace')
@@ -61,13 +64,14 @@ describe('replaceMealIdea', () => {
       day: 1,
       replacedMealId: 'Omelette',
       keptMealIds: ['Soupe'],
+      seenMealIds: ['Omelette', 'Quiche'],
     })
   })
 
   it('returns null when the API has no alternative (404)', async () => {
     mockedFetch.mockResolvedValue(jsonResponse(404, {}))
 
-    const result = await replaceMealIdea(criteria(), idea(1, 'Omelette'), [])
+    const result = await replaceMealIdea(criteria(), idea(1, 'Omelette'), [], ['Omelette'])
 
     expect(result).toBeNull()
   })
@@ -75,6 +79,6 @@ describe('replaceMealIdea', () => {
   it('throws on an unexpected error status', async () => {
     mockedFetch.mockResolvedValue(jsonResponse(500, {}))
 
-    await expect(replaceMealIdea(criteria(), idea(1, 'Omelette'), [])).rejects.toThrow()
+    await expect(replaceMealIdea(criteria(), idea(1, 'Omelette'), [], ['Omelette'])).rejects.toThrow()
   })
 })

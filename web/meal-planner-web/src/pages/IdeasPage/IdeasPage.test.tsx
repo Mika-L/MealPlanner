@@ -53,10 +53,68 @@ describe('IdeasPage', () => {
     expect(screen.getByRole('heading', { name: 'Soupe' })).toBeInTheDocument()
 
     // Le repas conservé (jour 2) verrouille ses ingrédients ; le repas remplacé n'est pas conservé.
+    // Les idées initiales de tout le planning sont envoyées comme « déjà vues » pour ne pas être repiochées.
     expect(mockedReplace).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({ day: 1, id: 'Omelette' }),
       [expect.objectContaining({ day: 2, id: 'Soupe' })],
+      ['Omelette', 'Soupe'],
+    )
+  })
+
+  it('shares the seen history across days so a discarded recipe never resurfaces on another day', async () => {
+    const user = await generate([idea(1, 'Omelette'), idea(2, 'Soupe')])
+
+    // On remplace l'idée du jour 1 : « Omelette » est écartée.
+    mockedReplace.mockResolvedValueOnce(idea(1, 'Gratin'))
+    await user.click(screen.getAllByRole('button', { name: /Remplacer/ })[0])
+    await screen.findByRole('heading', { name: 'Gratin' })
+
+    // En remplaçant le jour 2, l'historique commun exclut « Omelette » (écartée au jour 1) en plus
+    // des idées initiales : une recette abandonnée sur un jour ne réapparaît pas sur un autre.
+    mockedReplace.mockResolvedValueOnce(idea(2, 'Curry'))
+    await user.click(screen.getAllByRole('button', { name: /Remplacer/ })[1])
+    await screen.findByRole('heading', { name: 'Curry' })
+
+    expect(mockedReplace).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({ day: 2, id: 'Soupe' }),
+      [expect.objectContaining({ day: 1, id: 'Gratin' })],
+      ['Omelette', 'Soupe', 'Gratin'],
+    )
+  })
+
+  it('accumulates the seen recipes so each replacement asks for a new one, then restarts the cycle', async () => {
+    const user = await generate([idea(1, 'Omelette')])
+
+    mockedReplace.mockResolvedValueOnce(idea(1, 'Gratin'))
+    await user.click(screen.getByRole('button', { name: /Remplacer/ }))
+    await screen.findByRole('heading', { name: 'Gratin' })
+
+    // 2e remplacement : l'historique inclut désormais l'idée initiale ET la précédente alternative.
+    mockedReplace.mockResolvedValueOnce(idea(1, 'Quiche'))
+    await user.click(screen.getByRole('button', { name: /Remplacer/ }))
+    await screen.findByRole('heading', { name: 'Quiche' })
+    expect(mockedReplace).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({ id: 'Gratin' }),
+      [],
+      ['Omelette', 'Gratin'],
+    )
+
+    // Le pool est épuisé : l'API renvoie une recette déjà vue → l'historique repart de zéro.
+    mockedReplace.mockResolvedValueOnce(idea(1, 'Omelette'))
+    await user.click(screen.getByRole('button', { name: /Remplacer/ }))
+    await screen.findByRole('heading', { name: 'Omelette' })
+
+    mockedReplace.mockResolvedValueOnce(idea(1, 'Gratin'))
+    await user.click(screen.getByRole('button', { name: /Remplacer/ }))
+    await screen.findByRole('heading', { name: 'Gratin' })
+    expect(mockedReplace).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({ id: 'Omelette' }),
+      [],
+      ['Omelette'],
     )
   })
 

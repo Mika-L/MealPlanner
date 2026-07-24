@@ -11,13 +11,19 @@ export function IdeasPage() {
   const [hasSearched, setHasSearched] = useState(false)
   const [replacingDay, setReplacingDay] = useState<number | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  // Recettes déjà proposées sur l'ensemble du planning (tous jours confondus) : l'API en pioche une
+  // nouvelle à chaque remplacement, si bien qu'une recette écartée ne réapparaît pas — ni le même jour,
+  // ni un autre — tant que le pool éligible n'est pas épuisé.
+  const [seen, setSeen] = useState<string[]>([])
 
   const handleSubmit = async (submitted: MealCriteria) => {
     setStatus('loading')
     setHasSearched(true)
     setNotice(null)
     try {
-      setIdeas(await generateMealIdeas(submitted))
+      const generated = await generateMealIdeas(submitted)
+      setIdeas(generated)
+      setSeen(generated.map((idea) => idea.id))
       setCriteria(submitted)
       setStatus('idle')
     } catch {
@@ -36,12 +42,20 @@ export function IdeasPage() {
     setNotice(null)
     try {
       const kept = ideas.filter((idea) => idea.day !== target.day)
-      const replacement = await replaceMealIdea(criteria, target, kept)
+      const replacement = await replaceMealIdea(criteria, target, kept, seen)
       if (replacement === null) {
         setNotice(`Aucune autre recette disponible pour le jour ${target.day}.`)
         return
       }
-      setIdeas((current) => current.map((idea) => (idea.day === target.day ? replacement : idea)))
+      const nextIdeas = ideas.map((idea) => (idea.day === target.day ? replacement : idea))
+      setIdeas(nextIdeas)
+      // Une recette déjà vue qui ressort signale que le pool est épuisé : on repart de l'écran courant
+      // pour reparcourir toutes les alternatives avant de boucler à nouveau.
+      setSeen(
+        seen.includes(replacement.id)
+          ? nextIdeas.map((idea) => idea.id)
+          : [...seen, replacement.id],
+      )
     } catch {
       setNotice('Le remplacement a échoué. Réessaie.')
     } finally {
