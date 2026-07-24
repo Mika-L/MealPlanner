@@ -40,6 +40,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setSession(await authClient.register(input))
   }, [])
 
+  const loginWithGoogle = useCallback(async (idToken: string) => {
+    setSession(await authClient.loginWithGoogle(idToken))
+  }, [])
+
   const logout = useCallback(() => {
     clearSession()
   }, [])
@@ -50,9 +54,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
       user,
       login,
       register,
+      loginWithGoogle,
       logout,
     }),
-    [user, login, register, logout],
+    [user, login, register, loginWithGoogle, logout],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

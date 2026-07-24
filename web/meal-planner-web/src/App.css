@@ -745,6 +745,17 @@ button[type='submit']:hover,
   font-size: 0.82rem;
 }
 
+/* Conteneur du bouton officiel Google (rendu par le SDK dans une iframe). */
+.auth__google {
+  display: flex;
+  justify-content: center;
+}
+
+.auth__google--busy {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
 /* Champ mot de passe : libellé + saisie (avec bouton afficher/masquer) + règles en temps réel */
 .auth__field {
   display: flex;

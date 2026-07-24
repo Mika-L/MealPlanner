@@ -12,6 +12,7 @@ import { AuthPage } from './AuthPage'
 vi.mock('../../api/authClient', () => ({
   login: vi.fn(),
   register: vi.fn(),
+  loginWithGoogle: vi.fn(),
   getCurrentUser: vi.fn(),
 }))
 
