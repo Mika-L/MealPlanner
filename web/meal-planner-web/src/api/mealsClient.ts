@@ -37,13 +37,15 @@ interface ReplaceMealIdeaResponse {
 /**
  * Remplace une idée du planning par une autre recette respectant les critères de la génération.
  * Les repas conservés (`kept`) verrouillent leurs ingrédients du frigo (« un ingrédient = un repas »)
- * et ne sont jamais repiochés, pas plus que l'idée remplacée. Renvoie `null` quand aucune alternative
- * n'existe (HTTP 404).
+ * et ne sont jamais repiochés, pas plus que l'idée remplacée. `seen` liste les recettes déjà proposées
+ * sur tout le planning (tous jours confondus) : l'API en pioche une nouvelle à chaque appel (une autre à
+ * chaque fois, sans réapparaître sur un autre jour). Renvoie `null` quand aucune alternative n'existe (HTTP 404).
  */
 export async function replaceMealIdea(
   criteria: MealCriteria,
   replaced: MealIdea,
   kept: MealIdea[],
+  seen: string[],
   signal?: AbortSignal,
 ): Promise<MealIdea | null> {
   const response = await apiFetch('/api/meals/ideas/replace', {
@@ -57,6 +59,7 @@ export async function replaceMealIdea(
       day: replaced.day,
       replacedMealId: replaced.id,
       keptMealIds: kept.map((idea) => idea.id),
+      seenMealIds: seen,
     }),
     signal,
   })

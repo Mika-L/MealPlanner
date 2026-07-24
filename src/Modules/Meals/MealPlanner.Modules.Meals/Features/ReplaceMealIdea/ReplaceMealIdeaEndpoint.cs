@@ -18,7 +18,8 @@ public sealed record ReplaceMealIdeaRequest(
     IReadOnlyList<string>? IncludeIngredients,
     int Day,
     Guid ReplacedMealId,
-    IReadOnlyList<Guid>? KeptMealIds);
+    IReadOnlyList<Guid>? KeptMealIds,
+    IReadOnlyList<Guid>? SeenMealIds);
 
 internal static class ReplaceMealIdeaEndpoint
 {
@@ -44,7 +45,8 @@ internal static class ReplaceMealIdeaEndpoint
             request.IncludeIngredients,
             request.Day,
             request.ReplacedMealId,
-            request.KeptMealIds ?? []);
+            request.KeptMealIds ?? [],
+            request.SeenMealIds ?? []);
 
         var validation = await validator.ValidateAsync(query, cancellationToken);
         if (!validation.IsValid)

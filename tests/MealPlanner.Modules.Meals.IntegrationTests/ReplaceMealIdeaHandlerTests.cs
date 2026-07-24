@@ -28,7 +28,7 @@ public sealed class ReplaceMealIdeaHandlerTests(MsSqlFixture fixture)
 
         var handler = new ReplaceMealIdeaHandler(dbContext, _currentUser);
         var query = new ReplaceMealIdeaQuery(
-            Season.Summer, null, null, null, Day: 3, replaced.Id, KeptMealIds: []);
+            Season.Summer, null, null, null, Day: 3, replaced.Id, KeptMealIds: [], SeenMealIds: []);
 
         var result = await handler.HandleAsync(query, cancellationToken);
 
@@ -52,7 +52,7 @@ public sealed class ReplaceMealIdeaHandlerTests(MsSqlFixture fixture)
 
         var handler = new ReplaceMealIdeaHandler(dbContext, _currentUser);
         var query = new ReplaceMealIdeaQuery(
-            null, null, null, null, Day: 1, replaced.Id, KeptMealIds: [kept.Id]);
+            null, null, null, null, Day: 1, replaced.Id, KeptMealIds: [kept.Id], SeenMealIds: []);
 
         var result = await handler.HandleAsync(query, cancellationToken);
 
@@ -77,7 +77,7 @@ public sealed class ReplaceMealIdeaHandlerTests(MsSqlFixture fixture)
 
         var handler = new ReplaceMealIdeaHandler(dbContext, _currentUser);
         var query = new ReplaceMealIdeaQuery(
-            null, null, null, IncludeIngredients: ["tomate"], Day: 1, replaced.Id, KeptMealIds: []);
+            null, null, null, IncludeIngredients: ["tomate"], Day: 1, replaced.Id, KeptMealIds: [], SeenMealIds: []);
 
         var result = await handler.HandleAsync(query, cancellationToken);
 
@@ -106,13 +106,73 @@ public sealed class ReplaceMealIdeaHandlerTests(MsSqlFixture fixture)
 
         var handler = new ReplaceMealIdeaHandler(dbContext, _currentUser);
         var query = new ReplaceMealIdeaQuery(
-            null, null, null, IncludeIngredients: ["jambon"], Day: 1, replaced.Id, KeptMealIds: [keptSalad.Id]);
+            null, null, null, IncludeIngredients: ["jambon"], Day: 1, replaced.Id, KeptMealIds: [keptSalad.Id],
+            SeenMealIds: []);
 
         var result = await handler.HandleAsync(query, cancellationToken);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Meal.Name.Should().Be("Riz nature");
         result.Value.Meal.MatchedIngredients.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Should_return_a_different_alternative_each_time_until_the_pool_is_exhausted()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var dbContext = await CreateFreshDbContextAsync(cancellationToken);
+
+        var replaced = new Meal(OwnerId, "Repas de départ", "", Season.AllYear, MealStyle.Quick, 5);
+        var first = new Meal(OwnerId, "Alternative rapide", "", Season.AllYear, MealStyle.Quick, 10);
+        var second = new Meal(OwnerId, "Alternative moyenne", "", Season.AllYear, MealStyle.Quick, 20);
+        var third = new Meal(OwnerId, "Alternative lente", "", Season.AllYear, MealStyle.Quick, 30);
+        dbContext.Meals.AddRange(replaced, first, second, third);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var handler = new ReplaceMealIdeaHandler(dbContext, _currentUser);
+
+        // On rejoue « Remplacer » en accumulant l'historique des recettes déjà proposées pour ce jour :
+        // chaque appel doit renvoyer une recette encore jamais vue, sans jamais ping-ponger.
+        var seen = new List<Guid> { replaced.Id };
+        var proposed = new List<Guid>();
+        for (var i = 0; i < 3; i++)
+        {
+            var query = new ReplaceMealIdeaQuery(
+                null, null, null, null, Day: 1, replaced.Id, KeptMealIds: [], SeenMealIds: seen);
+
+            var result = await handler.HandleAsync(query, cancellationToken);
+
+            result.IsSuccess.Should().BeTrue();
+            proposed.Add(result.Value.Meal.Id);
+            seen.Add(result.Value.Meal.Id);
+        }
+
+        proposed.Should().Equal(first.Id, second.Id, third.Id);
+    }
+
+    [Fact]
+    public async Task Should_restart_the_cycle_without_repeating_the_current_meal_once_exhausted()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var dbContext = await CreateFreshDbContextAsync(cancellationToken);
+
+        var first = new Meal(OwnerId, "Alternative rapide", "", Season.AllYear, MealStyle.Quick, 10);
+        var second = new Meal(OwnerId, "Alternative moyenne", "", Season.AllYear, MealStyle.Quick, 20);
+        // La recette actuellement affichée est la dernière du cycle ; toutes les autres ont déjà été vues.
+        var current = new Meal(OwnerId, "Alternative lente", "", Season.AllYear, MealStyle.Quick, 30);
+        dbContext.Meals.AddRange(first, second, current);
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        var handler = new ReplaceMealIdeaHandler(dbContext, _currentUser);
+        var query = new ReplaceMealIdeaQuery(
+            null, null, null, null, Day: 1, current.Id,
+            KeptMealIds: [], SeenMealIds: [first.Id, second.Id, current.Id]);
+
+        var result = await handler.HandleAsync(query, cancellationToken);
+
+        // Pool épuisé : le cycle repart sur la plus rapide, jamais sur la recette affichée.
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Meal.Id.Should().Be(first.Id);
     }
 
     [Fact]
@@ -128,7 +188,7 @@ public sealed class ReplaceMealIdeaHandlerTests(MsSqlFixture fixture)
 
         var handler = new ReplaceMealIdeaHandler(dbContext, _currentUser);
         var query = new ReplaceMealIdeaQuery(
-            null, null, null, null, Day: 1, replaced.Id, KeptMealIds: [kept.Id]);
+            null, null, null, null, Day: 1, replaced.Id, KeptMealIds: [kept.Id], SeenMealIds: []);
 
         var result = await handler.HandleAsync(query, cancellationToken);
 
