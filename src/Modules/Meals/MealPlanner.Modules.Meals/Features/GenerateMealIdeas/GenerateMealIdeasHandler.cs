@@ -79,19 +79,13 @@ internal sealed class GenerateMealIdeasHandler(MealsDbContext dbContext, ICurren
         IReadOnlyList<string> availableIngredients,
         int days)
     {
-        var pantry = availableIngredients
-            .Select(term => (Original: term.Trim(), Normalized: SearchText.Normalize(term)))
-            .Where(term => term.Normalized.Length > 0)
-            .DistinctBy(term => term.Normalized)
-            .ToList();
+        var pantry = PantryMatcher.BuildPantry(availableIngredients);
 
         var candidates = pool
             .Select(meal => new
             {
                 Meal = meal,
-                Matched = pantry
-                    .Where(term => meal.Ingredients.Any(ingredient => SearchText.Normalize(ingredient.Name).Contains(term.Normalized)))
-                    .ToList(),
+                Matched = PantryMatcher.Match(meal, pantry),
             })
             .ToList();
 

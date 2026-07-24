@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
 
+import { GoogleSignInButton } from '../../components/GoogleSignInButton/GoogleSignInButton'
 import { useAuth } from '../../auth'
 
 type Mode = 'login' | 'register'
@@ -13,7 +14,7 @@ interface LocationState {
 const MIN_PASSWORD_LENGTH = 8
 
 export function AuthPage() {
-  const { status, login, register } = useAuth()
+  const { status, login, register, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -37,6 +38,19 @@ export function AuthPage() {
   const switchMode = (next: Mode) => {
     setMode(next)
     setError(null)
+  }
+
+  const handleGoogleCredential = async (idToken: string) => {
+    setError(null)
+    setSubmitting(true)
+    try {
+      await loginWithGoogle(idToken)
+      navigate(redirectTo, { replace: true })
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'La connexion Google a échoué.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -174,13 +188,14 @@ export function AuthPage() {
         </div>
 
         <div className="auth__social">
-          <button type="button" className="auth__social-btn" disabled>
-            Continuer avec Google
-          </button>
+          <GoogleSignInButton
+            onCredential={(idToken) => void handleGoogleCredential(idToken)}
+            disabled={submitting}
+          />
           <button type="button" className="auth__social-btn" disabled>
             Continuer avec Facebook
           </button>
-          <p className="auth__social-hint">Connexion Google et Facebook bientôt disponible.</p>
+          <p className="auth__social-hint">Connexion Facebook bientôt disponible.</p>
         </div>
       </section>
     </div>
