@@ -9,6 +9,7 @@ export interface AuthContextValue {
   user: AuthenticatedUser | null
   login: (input: LoginInput) => Promise<void>
   register: (input: RegisterInput) => Promise<void>
+  loginWithGoogle: (idToken: string) => Promise<void>
   logout: () => void
 }
 
